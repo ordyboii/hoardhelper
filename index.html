@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Renamer & Exporter</title>
+    <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Video Renamer</h1>
+        <p class="subtitle">Drag & Drop TV Shows or Movies to Organize</p>
+
+        <!-- Main Interface -->
+        <div id="drop-zone" class="drop-zone">
+            <p>Drag files here or click to select</p>
+            <input type="file" id="file-input" multiple style="display: none;">
+        </div>
+
+        <div class="actions">
+            <button id="btn-settings" class="btn secondary">Settings (Nextcloud)</button>
+            <button id="btn-clear" class="btn secondary">Clear List</button>
+            <div style="flex-grow: 1;"></div>
+            <button id="btn-export" class="btn primary" disabled>Export Files</button>
+        </div>
+
+        <div class="file-list-container">
+            <table id="file-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30%">Original Name</th>
+                        <th style="width: 10%">Status</th>
+                        <th style="width: 50%">Proposed Path</th>
+                        <th style="width: 10%">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be added here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Edit Metadata Modal -->
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Edit File Metadata</h2>
+            
+            <div class="form-group">
+                <label>Type</label>
+                <div style="display: flex; gap: 20px;">
+                    <label style="font-weight: normal;"><input type="radio" name="edit-type" value="tv" id="edit-type-tv"> TV Show</label>
+                    <label style="font-weight: normal;"><input type="radio" name="edit-type" value="movie" id="edit-type-movie"> Movie</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="edit-series">Series / Movie Name</label>
+                <input type="text" id="edit-series">
+            </div>
+
+            <div id="edit-tv-fields" style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label for="edit-season">Season</label>
+                    <input type="number" id="edit-season" min="1">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="edit-episode">Episode</label>
+                    <input type="number" id="edit-episode" min="1">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <div style="flex-grow: 1"></div>
+                <button id="btn-cancel-edit" class="btn secondary">Cancel</button>
+                <button id="btn-save-edit" class="btn primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Nextcloud Settings</h2>
+            
+            <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                <input type="checkbox" id="set-enabled">
+                <label for="set-enabled" style="margin: 0; cursor: pointer;">Enable Remote Upload (Nextcloud)</label>
+            </div>
+
+            <div class="form-group">
+                <label for="set-url">WebDAV URL</label>
+                <input type="text" id="set-url" placeholder="https://cloud.example.com/remote.php/dav/files/user/">
+                <small>Full WebDAV URL to your files root.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="set-folder-tv">TV Shows Target Folder</label>
+                <input type="text" id="set-folder-tv" placeholder="/Videos/TV Shows">
+                <small>Path for TV episodes.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="set-folder-movie">Movies Target Folder</label>
+                <input type="text" id="set-folder-movie" placeholder="/Videos/Movies">
+                <small>Path for Movies.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="set-user">Username</label>
+                <input type="text" id="set-user">
+            </div>
+
+            <div class="form-group">
+                <label for="set-pass">Password / App Token</label>
+                <input type="password" id="set-pass">
+            </div>
+
+            <div class="modal-actions">
+                <button id="btn-test-conn" class="btn secondary">Test Connection</button>
+                <div style="flex-grow: 1"></div>
+                <button id="btn-cancel-settings" class="btn secondary">Cancel</button>
+                <button id="btn-save-settings" class="btn primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="src/renderer.ts"></script>
+</body>
+</html>
