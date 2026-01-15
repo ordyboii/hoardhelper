@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('api', {
     saveSettings: (settings: Settings) => ipcRenderer.invoke('save-settings', settings),
     testConnection: (settings?: Settings) => ipcRenderer.invoke('test-connection', settings),
     
+    // Helper to generate path for edit mode
+    generatePath: (metadata: FileMetadata) => ipcRenderer.invoke('generate-path', metadata),
+
     // Listen for upload progress
     onUploadProgress: (callback: (data: UploadProgress) => void) => 
         ipcRenderer.on('upload-progress', (event, data) => callback(data)),

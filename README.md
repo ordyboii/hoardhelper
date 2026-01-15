@@ -11,13 +11,13 @@
     *   **Remote:** Uploads files directly to a Nextcloud instance via WebDAV.
 *   **Manual Override:** Edit metadata (Series, Season, Episode) manually if the auto-parser fails.
 *   **Persistence:** Remembers your settings and credentials between sessions.
-*   **Modern UI:** Simple drag-and-drop interface for easy file management.
+*   **Dragon-Themed UI:** A modern, React-based interface with a dark "Dragon & Gold" aesthetic, featuring responsive drag-and-drop and intuitive file management.
 
 ## Tech Stack
 
 *   **Runtime:** [Electron](https://www.electronjs.org/)
 *   **Language:** [TypeScript](https://www.typescriptlang.org/)
-*   **Build Tool:** [Vite](https://vitejs.dev/)
+*   **Frontend:** [React](https://react.dev/) + [Vite](https://vitejs.dev/)
 *   **Persistence:** [electron-store](https://github.com/sindresorhus/electron-store)
 *   **Networking:** [webdav](https://github.com/perry-mitchell/webdav-client) (for Nextcloud integration)
 *   **Testing:** Node.js native test runner
@@ -73,12 +73,13 @@ npm test
 ```text
 /
 ├── src/
+│   ├── components/     # React UI Components
 │   ├── logic/          # Core business logic (parsing, export, webdav)
 │   ├── types/          # TypeScript type definitions
+│   ├── App.tsx         # Main React Application Component
 │   ├── main.ts         # Electron main process entry point
-│   ├── preload.ts      # Context bridge for IPC
-│   ├── renderer.ts     # Frontend UI logic
-│   └── style.css       # Application styles
+│   ├── preload.cts     # Context bridge for IPC
+│   └── index.tsx       # React Entry Point
 ├── test/               # Test files
 ├── index.html          # App entry point
 └── package.json        # Project configuration
