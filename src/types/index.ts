@@ -14,11 +14,9 @@ export interface FileMetadata extends ParseResult {
     proposed: string | null;
     valid: boolean;
     error?: string;
-    isRemote?: boolean;
 }
 
 export interface Settings {
-    enabled: boolean;
     url: string;
     targetFolder?: string; // Deprecated, kept for migration
     targetFolderTv: string;

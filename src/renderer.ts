@@ -20,7 +20,6 @@ let btnSettings: HTMLButtonElement;
 let btnSaveSettings: HTMLButtonElement;
 let btnCancelSettings: HTMLButtonElement;
 let btnTestConn: HTMLButtonElement;
-let inputEnabled: HTMLInputElement;
 let inputUrl: HTMLInputElement;
 let inputFolderTv: HTMLInputElement;
 let inputFolderMovie: HTMLInputElement;
@@ -57,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCancelSettings = document.getElementById('btn-cancel-settings') as HTMLButtonElement;
     btnTestConn = document.getElementById('btn-test-conn') as HTMLButtonElement;
 
-    inputEnabled = document.getElementById('set-enabled') as HTMLInputElement;
     inputUrl = document.getElementById('set-url') as HTMLInputElement;
     inputFolderTv = document.getElementById('set-folder-tv') as HTMLInputElement;
     inputFolderMovie = document.getElementById('set-folder-movie') as HTMLInputElement;
@@ -143,7 +141,6 @@ function initListeners() {
     btnSettings.addEventListener('click', async () => {
         // Load settings
         const settings = await window.api.getSettings();
-        inputEnabled.checked = settings.enabled || false;
         inputUrl.value = settings.url || '';
         
         // Migration Logic: Use old targetFolder if new ones are empty
@@ -162,7 +159,6 @@ function initListeners() {
 
     btnSaveSettings.addEventListener('click', async () => {
         const settings: Settings = {
-            enabled: inputEnabled.checked,
             url: inputUrl.value.trim(),
             targetFolderTv: inputFolderTv.value.trim(),
             targetFolderMovie: inputFolderMovie.value.trim(),
@@ -184,7 +180,6 @@ function initListeners() {
         
         // Grab current values from inputs
         const tempSettings: Settings = {
-            enabled: inputEnabled.checked,
             url: inputUrl.value.trim(),
             targetFolderTv: inputFolderTv.value.trim(),
             targetFolderMovie: inputFolderMovie.value.trim(),
@@ -206,8 +201,7 @@ function initListeners() {
         if (validFiles.length === 0) return;
 
         btnExport.disabled = true;
-        const btnText = validFiles[0].isRemote ? 'Uploading...' : 'Exporting...';
-        btnExport.innerText = btnText;
+        btnExport.innerText = 'Uploading...';
 
         // Execute Export
         const results = await window.api.exportFiles(validFiles);

@@ -1,5 +1,5 @@
 import path from 'path';
-import { ParseResult } from '../types';
+import { ParseResult } from '../types/index.js';
 
 /**
  * Normalizes a number to a 2-digit string (e.g., 1 -> "01").
@@ -33,8 +33,9 @@ function cleanSeriesName(name: string): string {
         clean = clean.replace(pattern, ' ');
     });
 
-    // 3. Replace dots, underscores, and parens with spaces
-    clean = clean.replace(/[\._]/g, ' ');
+    // 3. Replace dots, underscores, and illegal chars with spaces (keep parens)
+    // Added: \ : * ? " < > |
+    clean = clean.replace(/[\._\\:\*\?"<>\|]/g, ' ');
 
     // 4. Remove specific "release group" patterns that might remain (e.g. "-Group" at end)
     clean = clean.replace(/\s+-[a-zA-Z0-9]+$/, '');
@@ -46,7 +47,27 @@ function cleanSeriesName(name: string): string {
     // 6. Remove trailing hyphens
     clean = clean.replace(/[-]+$/, '');
 
-    return clean.trim();
+    return sanitizeSafe(clean.trim());
+}
+
+/**
+ * Strictly sanitizes a string to be safe for use as a filename component.
+ * Removes paths, control characters, and reserved filesystem characters.
+ */
+function sanitizeSafe(input: string): string {
+    // 1. Remove any character that is NOT alphanumeric, space, dot, hyphen, underscore, or parentheses.
+    // This whitelist approach automatically strips slashes (/, \), colons, wildcards, etc.
+    let safe = input.replace(/[^a-zA-Z0-9 \.\-_()]/g, '');
+
+    // 2. Prevent path traversal ".."
+    // We treat ".." as a dangerous sequence if it's not part of a normal name.
+    // Simplest approach: collapse multiple dots to a single dot, 
+    // OR just remove the sequence ".." entirely.
+    // Let's replace any sequence of 2+ dots with a single dot.
+    safe = safe.replace(/\.{2,}/g, '.');
+
+    // 3. Trim again just in case
+    return safe.trim();
 }
 
 /**

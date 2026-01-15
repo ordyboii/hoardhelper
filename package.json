@@ -4,8 +4,12 @@
   "description": "Organise your self-hosted media treasures",
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "clean": "rm -rf dist dist-electron",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "build": "npm run clean && npm run build:main && npm run build:renderer",
+    "watch:main": "tsc -p tsconfig.main.json -w",
+    "dev": "concurrently -k \"vite\" \"npm run watch:main\" \"NODE_ENV=development electron .\"",
     "preview": "vite preview",
     "test": "node --import tsx --test --experimental-test-coverage test/verify.ts",
     "dist": "npm run build && electron-builder"
@@ -34,19 +38,16 @@
       "maintainer": "ordyboii <68291857+ordyboii@users.noreply.github.com>"
     }
   },
-  "type": "commonjs",
+  "type": "module",
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^25.0.8",
+    "concurrently": "^9.2.1",
     "electron": "^39.2.7",
     "electron-builder": "^26.4.0",
-    "rimraf": "^6.1.2",
-    "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
-    "vite-plugin-electron": "^0.29.0",
-    "vite-plugin-electron-renderer": "^0.14.6"
+    "vite": "^7.3.1"
   },
   "dependencies": {
     "electron-store": "^11.0.2",

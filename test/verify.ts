@@ -1,9 +1,7 @@
-import { describe, it, before, after } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import path from 'path';
-import fs from 'fs-extra';
 import { parseFilename } from '../src/logic/parser';
-import { generateNewPath, exportFile } from '../src/logic/exporter';
+import { generateNewPath } from '../src/logic/exporter';
 
 describe('Renamer Logic', () => {
 
@@ -68,57 +66,80 @@ describe('Renamer Logic', () => {
         });
     });
 
-    describe('File Export Logic', () => {
-        const dummyDir = path.resolve('test_temp');
-        const dummyFile = path.join(dummyDir, 'Test.Show.S02E05.txt');
-        // The parser logic determines "Test Show" as the series name from "Test.Show..."
-        const expectedSeriesDir = path.resolve('export', 'Test Show');
-
-        before(async () => {
-            await fs.ensureDir(dummyDir);
-            await fs.writeFile(dummyFile, 'dummy content');
-            // Clean up previous test artifacts
-            if (await fs.pathExists(expectedSeriesDir)) {
-                await fs.remove(expectedSeriesDir);
+    describe('Security & Sanitization', () => {
+        const maliciousCases = [
+            {
+                name: 'Path Traversal (Internal Double Dot)',
+                input: 'My..Show.S01E01.mkv',
+                shouldNotContain: '..',
+                expectedSeries: 'My Show' 
+            },
+            {
+                name: 'Mixed Traversal (Windows style)',
+                input: '..\\..\\Windows\\System32.mkv',
+                shouldNotContain: '..',
+                // Backslashes now replaced by spaces
+                expectedSeries: 'Windows System32'
+            },
+            {
+                name: 'Null Byte Injection',
+                input: 'SafeName\0.mkv',
+                shouldNotContain: '\0',
+                expectedSeries: 'SafeName'
+            },
+            {
+                name: 'Control Characters',
+                input: 'ShowName\nNewline.S01E01.mkv',
+                shouldNotContain: '\n',
+                expectedSeries: 'ShowName Newline S01E01'
+            },
+            {
+                name: 'Illegal Characters',
+                input: 'Show:Name*With?Illegal<Chars>.S01E01.mkv',
+                // Illegal chars now replaced by spaces
+                expectedSeries: 'Show Name With Illegal Chars'
             }
-        });
+        ];
 
-        after(async () => {
-            if (await fs.pathExists(dummyDir)) {
-                await fs.remove(dummyDir);
-            }
-            // Cleanup the export artifact as well
-            if (await fs.pathExists(expectedSeriesDir)) {
-                await fs.remove(expectedSeriesDir);
-            }
-        });
-
-        it('should generate a valid path and export the file', async () => {
-            const metadata = parseFilename(dummyFile);
-            assert.ok(metadata, 'Metadata parsing failed');
-
-            const newPath = generateNewPath(metadata);
-            assert.ok(newPath, 'Path generation failed');
-            
-            // Perform export (local copy check)
-            const result = await exportFile({
-                fullPath: dummyFile,
-                destinationPath: newPath
+        maliciousCases.forEach((t) => {
+            it(`should sanitize: ${t.name}`, () => {
+                const result = parseFilename(t.input);
+                assert.ok(result);
+                
+                // Verify the series name is clean
+                if (t.shouldNotContain) {
+                    assert.strictEqual(result.series.includes(t.shouldNotContain), false, `Series name contained malicious sequence: ${t.shouldNotContain}`);
+                }
+                
+                // Verify strict equality if expectedSeries is provided
+                // Note: The sanitizer logic might collapse spaces, so we trim/simplify comparison if needed.
+                // Our current logic replaces dots with spaces, then sanitizes.
+                assert.strictEqual(result.series, t.expectedSeries);
+                
+                // Verify generated path is safe
+                const path = generateNewPath(result);
+                assert.ok(path);
+                assert.strictEqual(path.startsWith('/'), false, 'Path should be relative (no leading slash)');
+                assert.strictEqual(path.includes('..'), false, 'Path should not contain double dots');
             });
+        });
 
-            assert.strictEqual(result.success, true, `Export failed: ${result.error}`);
-            
-            // Verify file exists at destination
-            if (newPath) {
-               const exists = await fs.pathExists(newPath);
-               assert.strictEqual(exists, true, 'Destination file should exist');
-               
-               // Cleanup output file for this test
-               await fs.remove(newPath);
-               // Clean up the parent directory if possible (Export/Test Show/Season 02)
-               // This is tricky without knowing exact structure, but we can leave it or try to clean up the 'export' folder if it's test specific.
-               // For now, leaving the export artifact is acceptable or we can clean it.
-            }
+        it('should generate safe relative paths', () => {
+            const metadata = {
+                type: 'tv' as const,
+                series: 'Safe Show',
+                season: 1,
+                episode: 1,
+                formattedSeason: '01',
+                formattedEpisode: '01',
+                ext: '.mkv',
+                originalName: 'foo',
+                fullPath: 'foo'
+            };
+
+            const path = generateNewPath(metadata);
+            // Expected: Safe Show/Season 01/Safe Show - S01E01.mkv
+            assert.strictEqual(path, 'Safe Show/Season 01/Safe Show - S01E01.mkv');
         });
     });
 });
