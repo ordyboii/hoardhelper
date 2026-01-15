@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Organise your self-hosted media treasures",
   "main": "dist-electron/main.js",
+  "type": "module",
   "scripts": {
     "clean": "rm -rf dist dist-electron",
     "build:main": "tsc -p tsconfig.main.json",
@@ -38,9 +39,11 @@
       "maintainer": "ordyboii <68291857+ordyboii@users.noreply.github.com>"
     }
   },
-  "type": "module",
+  "dependencies": {
+    "electron-store": "^11.0.2",
+    "webdav": "^5.8.0"
+  },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.4",
     "@types/node": "^25.0.8",
     "concurrently": "^9.2.1",
     "electron": "^39.2.7",
@@ -48,10 +51,5 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
-  },
-  "dependencies": {
-    "electron-store": "^11.0.2",
-    "fs-extra": "^11.3.3",
-    "webdav": "^5.8.0"
   }
 }

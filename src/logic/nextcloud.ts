@@ -1,6 +1,7 @@
 import { createClient, WebDAVClient } from "webdav";
-import fs from 'fs-extra';
-import path from 'path';
+import fs from 'node:fs';
+import { stat } from 'node:fs/promises';
+import path from 'node:path';
 import { ExportResult } from '../types/index.js';
 
 let client: WebDAVClient | null = null;
@@ -94,7 +95,7 @@ export async function uploadFileToNextcloud(
     try {
         await ensureRemoteDir(path.dirname(remoteDestination));
         
-        const totalSize = (await fs.stat(localPath)).size;
+        const totalSize = (await stat(localPath)).size;
         console.log(`[Nextcloud] File size: ${totalSize}`);
 
         return new Promise((resolve, reject) => {
