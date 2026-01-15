@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
-import { Settings, FileMetadata, ExportResult, UploadProgress } from './types/index.js';
+import type { Settings, FileMetadata, ExportResult, UploadProgress } from './types/index.js';
 
 contextBridge.exposeInMainWorld('api', {
     // Get path from File object (handles Electron security updates)

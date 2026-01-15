@@ -16,7 +16,7 @@
   },
   "include": [
     "src/main.ts",
-    "src/preload.ts",
+    "src/preload.cts",
     "src/logic/**/*"
   ]
 }

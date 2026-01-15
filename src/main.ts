@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { parseFilename } from './logic/parser.js';
 import { generateNewPath } from './logic/exporter.js';
 import { initializeClient, testConnection, uploadFileToNextcloud } from './logic/nextcloud.js';
-import { Settings, FileMetadata, ExportResult } from './types/index.js';
+import type { Settings, FileMetadata, ExportResult } from './types/index.js';
 
 // Workaround for __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -20,9 +20,10 @@ function createWindow() {
         width: 1000,
         height: 800,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'), 
+            preload: path.join(__dirname, 'preload.cjs'),
             nodeIntegration: false,
-            contextIsolation: true
+            contextIsolation: true,
+            devTools: false
         }
     });
 
@@ -31,7 +32,7 @@ function createWindow() {
     } else {
         mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
     }
-    mainWindow.webContents.openDevTools(); 
+    mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
@@ -89,53 +90,71 @@ ipcMain.handle('test-connection', async (event, settings?: Settings) => {
 
 // 1. Parse Files
 ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
-    const settings = store.get('nextcloud') as Settings | undefined;
-    
+    let settings: Settings | undefined;
+    try {
+        settings = store.get('nextcloud') as Settings | undefined;
+    } catch (e) {
+        console.error('[Main] Failed to read settings:', e);
+    }
+
     console.log(`[Main] Parsing files. Target folders from settings:`);
     console.log(`[Main] TV Target: ${settings?.targetFolderTv || settings?.targetFolder}`);
     console.log(`[Main] Movie Target: ${settings?.targetFolderMovie || settings?.targetFolder}`);
 
     const results: FileMetadata[] = [];
     for (const filePath of filePaths) {
-        const metadata = parseFilename(filePath);
-        if (metadata) {
-            let proposedPath = generateNewPath(metadata);
-            
-            // Prepend the remote base folder if set
-            if (proposedPath) {
-                let targetBase = '';
-                if (metadata.type === 'tv') {
-                    targetBase = settings?.targetFolderTv || settings?.targetFolder || '';
-                } else {
-                    targetBase = settings?.targetFolderMovie || settings?.targetFolder || '';
+        try {
+            const metadata = parseFilename(filePath);
+            if (metadata) {
+                let proposedPath = generateNewPath(metadata);
+
+                // Prepend the remote base folder if set
+                if (proposedPath) {
+                    let targetBase = '';
+                    if (metadata.type === 'tv') {
+                        targetBase = settings?.targetFolderTv || settings?.targetFolder || '';
+                    } else {
+                        targetBase = settings?.targetFolderMovie || settings?.targetFolder || '';
+                    }
+
+                    if (targetBase) {
+                        // Security: Sanitize base path to prevent traversal
+                        const safeBase = targetBase.replace(/\.\./g, '');
+
+                        // Ensure no double slashes
+                        const base = safeBase.replace(/\/$/, '');
+                        const rel = proposedPath.replace(/^\//, '');
+                        proposedPath = `${base}/${rel}`;
+                    }
                 }
 
-                if (targetBase) {
-                    // Security: Sanitize base path to prevent traversal
-                    const safeBase = targetBase.replace(/\.\./g, '');
-                    
-                    // Ensure no double slashes
-                    const base = safeBase.replace(/\/$/, '');
-                    const rel = proposedPath.replace(/^\//, '');
-                    proposedPath = `${base}/${rel}`;
-                }
+                results.push({
+                    ...metadata,
+                    proposed: proposedPath,
+                    valid: true
+                });
+            } else {
+                results.push({
+                    // Create a dummy parse result for the error case
+                    series: '',
+                    ext: path.extname(filePath),
+                    originalName: path.basename(filePath),
+                    fullPath: filePath,
+                    proposed: null,
+                    valid: false,
+                    error: "Could not parse metadata"
+                });
             }
-
+        } catch (error: any) {
+            console.error(`[Main] Error parsing file ${filePath}:`, error);
             results.push({
-                ...metadata,
-                proposed: proposedPath,
-                valid: true
-            });
-        } else {
-            results.push({
-                // Create a dummy parse result for the error case
-                series: '',
+                series: 'Error',
                 ext: path.extname(filePath),
                 originalName: path.basename(filePath),
                 fullPath: filePath,
                 proposed: null,
                 valid: false,
-                error: "Could not parse metadata"
+                error: `System Error: ${error.message}`
             });
         }
     }
@@ -145,7 +164,7 @@ ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
 // 2. Generate Path (Helper for Edit Mode)
 ipcMain.handle('generate-path', (event, metadata: FileMetadata) => {
     const settings = store.get('nextcloud') as Settings | undefined;
-    
+
     let proposedPath = generateNewPath(metadata);
 
     // Prepend the remote base folder if set
@@ -160,7 +179,7 @@ ipcMain.handle('generate-path', (event, metadata: FileMetadata) => {
         if (targetBase) {
             // Security: Sanitize base path to prevent traversal
             const safeBase = targetBase.replace(/\.\./g, '');
-            
+
             const base = safeBase.replace(/\/$/, '');
             const rel = proposedPath.replace(/^\//, '');
             proposedPath = `${base}/${rel}`;
@@ -178,26 +197,26 @@ ipcMain.handle('export-files', async (event, filesToExport: FileMetadata[]) => {
 
     for (let i = 0; i < filesToExport.length; i++) {
         const file = filesToExport[i];
-        
+
         // Notify start
-        mainWindow?.webContents.send('upload-progress', { 
-            index: i, 
-            percent: 0, 
-            status: 'Starting Upload...' 
+        mainWindow?.webContents.send('upload-progress', {
+            index: i,
+            percent: 0,
+            status: 'Starting Upload...'
         });
 
         let result: ExportResult = { success: false };
-        
+
         // RETRY LOGIC (Simple 1 retry)
         let attempts = 0;
         const maxAttempts = 2;
-        
+
         while (attempts < maxAttempts) {
             result = await uploadFileToNextcloud(file.fullPath, file.proposed, (percent: number) => {
-                mainWindow?.webContents.send('upload-progress', { 
-                    index: i, 
-                    percent: percent, 
-                    status: `Uploading (${percent}%)` 
+                mainWindow?.webContents.send('upload-progress', {
+                    index: i,
+                    percent: percent,
+                    status: `Uploading (${percent}%)`
                 });
             });
 
@@ -205,14 +224,14 @@ ipcMain.handle('export-files', async (event, filesToExport: FileMetadata[]) => {
             attempts++;
             console.log(`[Upload Fail] Retry ${attempts}/${maxAttempts} for ${file.originalName}`);
         }
-        
+
         results.push(result);
-        
+
         // Notify done
-        mainWindow?.webContents.send('upload-progress', { 
-            index: i, 
-            percent: 100, 
-            status: result.success ? 'Done' : 'Failed' 
+        mainWindow?.webContents.send('upload-progress', {
+            index: i,
+            percent: 100,
+            status: result.success ? 'Done' : 'Failed'
         });
     }
     return results;
