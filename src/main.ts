@@ -2,17 +2,17 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import Store from 'electron-store';
 import { fileURLToPath } from 'url';
-import { parseFilename } from './logic/parser';
-import { generateNewPath, exportFile } from './logic/exporter';
-import { initializeClient, testConnection, uploadFileToNextcloud } from './logic/nextcloud';
-import { Settings, FileMetadata, ExportResult } from './types';
+import { parseFilename } from './logic/parser.js';
+import { generateNewPath } from './logic/exporter.js';
+import { initializeClient, testConnection, uploadFileToNextcloud } from './logic/nextcloud.js';
+import type { Settings, FileMetadata, ExportResult } from './types/index.js';
 
 // Workaround for __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Store with specific types if needed, or cast later
-const store = new Store();
+const store = new Store() as any;
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
@@ -20,18 +20,19 @@ function createWindow() {
         width: 1000,
         height: 800,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'), // Vite builds this to .js
+            preload: path.join(__dirname, 'preload.cjs'),
             nodeIntegration: false,
-            contextIsolation: true
+            contextIsolation: true,
+            devTools: false
         }
     });
 
-    if (process.env.VITE_DEV_SERVER_URL) {
-        mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+    if (process.env.NODE_ENV === 'development') {
+        mainWindow.loadURL('http://localhost:5173');
     } else {
         mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
     }
-    mainWindow.webContents.openDevTools(); 
+    mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
@@ -89,55 +90,71 @@ ipcMain.handle('test-connection', async (event, settings?: Settings) => {
 
 // 1. Parse Files
 ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
-    // Check if we are in "Remote Mode" (do we have settings?)
-    const settings = store.get('nextcloud') as Settings | undefined;
-    const isRemote = !!(settings && settings.enabled);
-
-    if (isRemote) {
-        console.log(`[Main] Remote mode enabled.`);
-        console.log(`[Main] TV Target: ${settings?.targetFolderTv || settings?.targetFolder}`);
-        console.log(`[Main] Movie Target: ${settings?.targetFolderMovie || settings?.targetFolder}`);
+    let settings: Settings | undefined;
+    try {
+        settings = store.get('nextcloud') as Settings | undefined;
+    } catch (e) {
+        console.error('[Main] Failed to read settings:', e);
     }
+
+    console.log(`[Main] Parsing files. Target folders from settings:`);
+    console.log(`[Main] TV Target: ${settings?.targetFolderTv || settings?.targetFolder}`);
+    console.log(`[Main] Movie Target: ${settings?.targetFolderMovie || settings?.targetFolder}`);
 
     const results: FileMetadata[] = [];
     for (const filePath of filePaths) {
-        const metadata = parseFilename(filePath);
-        if (metadata) {
-            let proposedPath = generateNewPath(metadata, isRemote);
-            
-            // Prepend the remote base folder if set
-            if (isRemote && proposedPath) {
-                let targetBase = '';
-                if (metadata.type === 'tv') {
-                    targetBase = settings?.targetFolderTv || settings?.targetFolder || '';
-                } else {
-                    targetBase = settings?.targetFolderMovie || settings?.targetFolder || '';
+        try {
+            const metadata = parseFilename(filePath);
+            if (metadata) {
+                let proposedPath = generateNewPath(metadata);
+
+                // Prepend the remote base folder if set
+                if (proposedPath) {
+                    let targetBase = '';
+                    if (metadata.type === 'tv') {
+                        targetBase = settings?.targetFolderTv || settings?.targetFolder || '';
+                    } else {
+                        targetBase = settings?.targetFolderMovie || settings?.targetFolder || '';
+                    }
+
+                    if (targetBase) {
+                        // Security: Sanitize base path to prevent traversal
+                        const safeBase = targetBase.replace(/\.\./g, '');
+
+                        // Ensure no double slashes
+                        const base = safeBase.replace(/\/$/, '');
+                        const rel = proposedPath.replace(/^\//, '');
+                        proposedPath = `${base}/${rel}`;
+                    }
                 }
 
-                if (targetBase) {
-                    // Ensure no double slashes
-                    const base = targetBase.replace(/\/$/, '');
-                    const rel = proposedPath.replace(/^\//, '');
-                    proposedPath = `${base}/${rel}`;
-                }
+                results.push({
+                    ...metadata,
+                    proposed: proposedPath,
+                    valid: true
+                });
+            } else {
+                results.push({
+                    // Create a dummy parse result for the error case
+                    series: '',
+                    ext: path.extname(filePath),
+                    originalName: path.basename(filePath),
+                    fullPath: filePath,
+                    proposed: null,
+                    valid: false,
+                    error: "Could not parse metadata"
+                });
             }
-
+        } catch (error: any) {
+            console.error(`[Main] Error parsing file ${filePath}:`, error);
             results.push({
-                ...metadata,
-                proposed: proposedPath,
-                valid: true,
-                isRemote: isRemote // Tell UI this is a remote path
-            });
-        } else {
-            results.push({
-                // Create a dummy parse result for the error case
-                series: '',
+                series: 'Error',
                 ext: path.extname(filePath),
                 originalName: path.basename(filePath),
                 fullPath: filePath,
                 proposed: null,
                 valid: false,
-                error: "Could not parse metadata"
+                error: `System Error: ${error.message}`
             });
         }
     }
@@ -147,12 +164,11 @@ ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
 // 2. Generate Path (Helper for Edit Mode)
 ipcMain.handle('generate-path', (event, metadata: FileMetadata) => {
     const settings = store.get('nextcloud') as Settings | undefined;
-    const isRemote = !!(settings && settings.enabled);
-    
-    let proposedPath = generateNewPath(metadata, isRemote);
+
+    let proposedPath = generateNewPath(metadata);
 
     // Prepend the remote base folder if set
-    if (isRemote && proposedPath) {
+    if (proposedPath) {
         let targetBase = '';
         if (metadata.type === 'tv') {
             targetBase = settings?.targetFolderTv || settings?.targetFolder || '';
@@ -161,7 +177,10 @@ ipcMain.handle('generate-path', (event, metadata: FileMetadata) => {
         }
 
         if (targetBase) {
-            const base = targetBase.replace(/\/$/, '');
+            // Security: Sanitize base path to prevent traversal
+            const safeBase = targetBase.replace(/\.\./g, '');
+
+            const base = safeBase.replace(/\/$/, '');
             const rel = proposedPath.replace(/^\//, '');
             proposedPath = `${base}/${rel}`;
         }
@@ -172,55 +191,47 @@ ipcMain.handle('generate-path', (event, metadata: FileMetadata) => {
 // 3. Export/Upload Files
 ipcMain.handle('export-files', async (event, filesToExport: FileMetadata[]) => {
     const settings = store.get('nextcloud') as Settings | undefined;
-    const isRemote = !!(settings && settings.enabled);
     const results: ExportResult[] = [];
 
-    console.log(`[Main] Exporting ${filesToExport.length} files. Remote: ${isRemote}`);
+    console.log(`[Main] Exporting (Upload) ${filesToExport.length} files.`);
 
     for (let i = 0; i < filesToExport.length; i++) {
         const file = filesToExport[i];
-        
+
         // Notify start
-        mainWindow?.webContents.send('upload-progress', { 
-            index: i, 
-            percent: 0, 
-            status: isRemote ? 'Starting Upload...' : 'Copying...' 
+        mainWindow?.webContents.send('upload-progress', {
+            index: i,
+            percent: 0,
+            status: 'Starting Upload...'
         });
 
         let result: ExportResult = { success: false };
-        if (isRemote) {
-            // RETRY LOGIC (Simple 1 retry)
-            let attempts = 0;
-            const maxAttempts = 2;
-            
-            while (attempts < maxAttempts) {
-                result = await uploadFileToNextcloud(file.fullPath, file.proposed, (percent) => {
-                    mainWindow?.webContents.send('upload-progress', { 
-                        index: i, 
-                        percent: percent, 
-                        status: `Uploading (${percent}%)` 
-                    });
-                });
 
-                if (result.success) break;
-                attempts++;
-                console.log(`[Upload Fail] Retry ${attempts}/${maxAttempts} for ${file.originalName}`);
-            }
-        } else {
-            // Local Export
-            result = await exportFile({
-                fullPath: file.fullPath,
-                destinationPath: file.proposed
+        // RETRY LOGIC (Simple 1 retry)
+        let attempts = 0;
+        const maxAttempts = 2;
+
+        while (attempts < maxAttempts) {
+            result = await uploadFileToNextcloud(file.fullPath, file.proposed, (percent: number) => {
+                mainWindow?.webContents.send('upload-progress', {
+                    index: i,
+                    percent: percent,
+                    status: `Uploading (${percent}%)`
+                });
             });
+
+            if (result.success) break;
+            attempts++;
+            console.log(`[Upload Fail] Retry ${attempts}/${maxAttempts} for ${file.originalName}`);
         }
-        
+
         results.push(result);
-        
+
         // Notify done
-        mainWindow?.webContents.send('upload-progress', { 
-            index: i, 
-            percent: 100, 
-            status: result.success ? 'Done' : 'Failed' 
+        mainWindow?.webContents.send('upload-progress', {
+            index: i,
+            percent: 100,
+            status: result.success ? 'Done' : 'Failed'
         });
     }
     return results;

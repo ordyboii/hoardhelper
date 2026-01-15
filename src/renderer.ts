@@ -20,7 +20,6 @@ let btnSettings: HTMLButtonElement;
 let btnSaveSettings: HTMLButtonElement;
 let btnCancelSettings: HTMLButtonElement;
 let btnTestConn: HTMLButtonElement;
-let inputEnabled: HTMLInputElement;
 let inputUrl: HTMLInputElement;
 let inputFolderTv: HTMLInputElement;
 let inputFolderMovie: HTMLInputElement;
@@ -43,107 +42,134 @@ let editingIndex: number = -1;
 let currentFiles: FileMetadata[] = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize Elements
-    dropZone = document.getElementById('drop-zone') as HTMLDivElement;
-    fileInput = document.getElementById('file-input') as HTMLInputElement;
-    fileTableBody = document.querySelector('#file-table tbody') as HTMLTableSectionElement;
-    btnExport = document.getElementById('btn-export') as HTMLButtonElement;
-    btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
+    try {
+        if (window.api) {
+            window.api.log('Renderer started');
+        } else {
+            console.error('Renderer started (API not available yet?)');
+            alert('CRITICAL ERROR: API not loaded. Preload script failed. Check console for details.');
+        }
 
-    // Settings Modal Elements
-    modal = document.getElementById('settings-modal') as HTMLDivElement;
-    btnSettings = document.getElementById('btn-settings') as HTMLButtonElement;
-    btnSaveSettings = document.getElementById('btn-save-settings') as HTMLButtonElement;
-    btnCancelSettings = document.getElementById('btn-cancel-settings') as HTMLButtonElement;
-    btnTestConn = document.getElementById('btn-test-conn') as HTMLButtonElement;
+        // Initialize Elements
+        dropZone = document.getElementById('drop-zone') as HTMLDivElement;
+        fileInput = document.getElementById('file-input') as HTMLInputElement;
+        fileTableBody = document.querySelector('#file-table tbody') as HTMLTableSectionElement;
+        btnExport = document.getElementById('btn-export') as HTMLButtonElement;
+        btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
 
-    inputEnabled = document.getElementById('set-enabled') as HTMLInputElement;
-    inputUrl = document.getElementById('set-url') as HTMLInputElement;
-    inputFolderTv = document.getElementById('set-folder-tv') as HTMLInputElement;
-    inputFolderMovie = document.getElementById('set-folder-movie') as HTMLInputElement;
-    inputUser = document.getElementById('set-user') as HTMLInputElement;
-    inputPass = document.getElementById('set-pass') as HTMLInputElement;
+        // Settings Modal Elements
+        modal = document.getElementById('settings-modal') as HTMLDivElement;
+        btnSettings = document.getElementById('btn-settings') as HTMLButtonElement;
+        btnSaveSettings = document.getElementById('btn-save-settings') as HTMLButtonElement;
+        btnCancelSettings = document.getElementById('btn-cancel-settings') as HTMLButtonElement;
+        btnTestConn = document.getElementById('btn-test-conn') as HTMLButtonElement;
 
-    // Edit Modal Init
-    editModal = document.getElementById('edit-modal') as HTMLDivElement;
-    editTypeTv = document.getElementById('edit-type-tv') as HTMLInputElement;
-    editTypeMovie = document.getElementById('edit-type-movie') as HTMLInputElement;
-    editSeries = document.getElementById('edit-series') as HTMLInputElement;
-    editSeason = document.getElementById('edit-season') as HTMLInputElement;
-    editEpisode = document.getElementById('edit-episode') as HTMLInputElement;
-    editTvFields = document.getElementById('edit-tv-fields') as HTMLDivElement;
-    btnSaveEdit = document.getElementById('btn-save-edit') as HTMLButtonElement;
-    btnCancelEdit = document.getElementById('btn-cancel-edit') as HTMLButtonElement;
+        inputUrl = document.getElementById('set-url') as HTMLInputElement;
+        inputFolderTv = document.getElementById('set-folder-tv') as HTMLInputElement;
+        inputFolderMovie = document.getElementById('set-folder-movie') as HTMLInputElement;
+        inputUser = document.getElementById('set-user') as HTMLInputElement;
+        inputPass = document.getElementById('set-pass') as HTMLInputElement;
 
-    initListeners();
+        // Edit Modal Init
+        editModal = document.getElementById('edit-modal') as HTMLDivElement;
+        editTypeTv = document.getElementById('edit-type-tv') as HTMLInputElement;
+        editTypeMovie = document.getElementById('edit-type-movie') as HTMLInputElement;
+        editSeries = document.getElementById('edit-series') as HTMLInputElement;
+        editSeason = document.getElementById('edit-season') as HTMLInputElement;
+        editEpisode = document.getElementById('edit-episode') as HTMLInputElement;
+        editTvFields = document.getElementById('edit-tv-fields') as HTMLDivElement;
+        btnSaveEdit = document.getElementById('btn-save-edit') as HTMLButtonElement;
+        btnCancelEdit = document.getElementById('btn-cancel-edit') as HTMLButtonElement;
+
+        initListeners();
+    } catch (err: any) {
+        console.error('Initialization Error:', err);
+        if (window.api) window.api.log(`Initialization Error: ${err.message}`);
+    }
 });
 
 function initListeners() {
+    // Helper to safely add listener
+    const safeAddListener = (element: HTMLElement | null, event: string, handler: any) => {
+        if (element) {
+            element.addEventListener(event, handler);
+        } else {
+            const msg = `Failed to add listener: Element not found for event '${event}'`;
+            console.error(msg);
+            if (window.api) window.api.log(msg);
+        }
+    };
+
     // Drag & Drop Handling
-    dropZone.addEventListener('dragover', (e: DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer) {
-            e.dataTransfer.dropEffect = 'copy';
-        }
-        dropZone.classList.add('hover');
-    });
-
-    dropZone.addEventListener('dragleave', (e: DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.remove('hover');
-    });
-
-    dropZone.addEventListener('drop', async (e: DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.remove('hover');
-        
-        window.api.log('Drop event detected.');
-
-        if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-            const files = Array.from(e.dataTransfer.files);
-            window.api.log(`Dropped ${files.length} files.`);
-            
-            const filePaths = files.map(f => window.api.getFilePath(f));
-
-            if (filePaths.length > 0) {
-                await processDroppedFiles(filePaths);
-            } else {
-                window.api.log('No file paths found in drop event.');
+    if (dropZone) {
+        dropZone.addEventListener('dragover', (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'copy';
             }
-        }
-    });
+            dropZone.classList.add('hover');
+        });
 
-    // Click to Select Handling
-    dropZone.addEventListener('click', () => {
-        fileInput.click();
-    });
+        dropZone.addEventListener('dragleave', (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('hover');
+        });
 
-    fileInput.addEventListener('change', async (e: Event) => {
-        const target = e.target as HTMLInputElement;
-        if (target.files && target.files.length > 0) {
-            const files = Array.from(target.files);
-            const filePaths = files.map(f => window.api.getFilePath(f));
+        dropZone.addEventListener('drop', async (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('hover');
             
-            await processDroppedFiles(filePaths);
-            // Reset value
-            target.value = '';
-        }
-    });
+            window.api.log('Drop event detected.');
+
+            if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+                const files = Array.from(e.dataTransfer.files);
+                window.api.log(`Dropped ${files.length} files.`);
+                
+                const filePaths = files.map(f => window.api.getFilePath(f));
+
+                if (filePaths.length > 0) {
+                    await processDroppedFiles(filePaths);
+                } else {
+                    window.api.log('No file paths found in drop event.');
+                }
+            }
+        });
+        
+        // Click to Select Handling
+        dropZone.addEventListener('click', () => {
+            if (fileInput) fileInput.click();
+        });
+    } else {
+        console.error('dropZone element missing');
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener('change', async (e: Event) => {
+            const target = e.target as HTMLInputElement;
+            if (target.files && target.files.length > 0) {
+                const files = Array.from(target.files);
+                const filePaths = files.map(f => window.api.getFilePath(f));
+                
+                await processDroppedFiles(filePaths);
+                // Reset value
+                target.value = '';
+            }
+        });
+    }
 
     // Button Handlers
-    btnClear.addEventListener('click', () => {
+    safeAddListener(btnClear, 'click', () => {
         currentFiles = [];
         renderTable();
         updateButtons();
     });
 
-    btnSettings.addEventListener('click', async () => {
+    safeAddListener(btnSettings, 'click', async () => {
         // Load settings
         const settings = await window.api.getSettings();
-        inputEnabled.checked = settings.enabled || false;
         inputUrl.value = settings.url || '';
         
         // Migration Logic: Use old targetFolder if new ones are empty
@@ -153,16 +179,15 @@ function initListeners() {
         inputUser.value = settings.username || '';
         inputPass.value = settings.password || ''; 
         
-        modal.classList.remove('hidden');
+        if (modal) modal.classList.remove('hidden');
     });
 
-    btnCancelSettings.addEventListener('click', () => {
-        modal.classList.add('hidden');
+    safeAddListener(btnCancelSettings, 'click', () => {
+        if (modal) modal.classList.add('hidden');
     });
 
-    btnSaveSettings.addEventListener('click', async () => {
+    safeAddListener(btnSaveSettings, 'click', async () => {
         const settings: Settings = {
-            enabled: inputEnabled.checked,
             url: inputUrl.value.trim(),
             targetFolderTv: inputFolderTv.value.trim(),
             targetFolderMovie: inputFolderMovie.value.trim(),
@@ -179,12 +204,11 @@ function initListeners() {
         }
     });
 
-    btnTestConn.addEventListener('click', async () => {
+    safeAddListener(btnTestConn, 'click', async () => {
         btnTestConn.innerText = "Testing...";
         
         // Grab current values from inputs
         const tempSettings: Settings = {
-            enabled: inputEnabled.checked,
             url: inputUrl.value.trim(),
             targetFolderTv: inputFolderTv.value.trim(),
             targetFolderMovie: inputFolderMovie.value.trim(),
@@ -201,13 +225,12 @@ function initListeners() {
         btnTestConn.innerText = "Test Connection";
     });
 
-    btnExport.addEventListener('click', async () => {
+    safeAddListener(btnExport, 'click', async () => {
         const validFiles = currentFiles.filter(f => f.valid);
         if (validFiles.length === 0) return;
 
         btnExport.disabled = true;
-        const btnText = validFiles[0].isRemote ? 'Uploading...' : 'Exporting...';
-        btnExport.innerText = btnText;
+        btnExport.innerText = 'Uploading...';
 
         // Execute Export
         const results = await window.api.exportFiles(validFiles);
@@ -239,15 +262,16 @@ function initListeners() {
             editTvFields.style.display = 'none';
         }
     };
-    editTypeTv.addEventListener('change', toggleEditFields);
-    editTypeMovie.addEventListener('change', toggleEditFields);
+    
+    safeAddListener(editTypeTv, 'change', toggleEditFields);
+    safeAddListener(editTypeMovie, 'change', toggleEditFields);
 
-    btnCancelEdit.addEventListener('click', () => {
-        editModal.classList.add('hidden');
+    safeAddListener(btnCancelEdit, 'click', () => {
+        if (editModal) editModal.classList.add('hidden');
         editingIndex = -1;
     });
 
-    btnSaveEdit.addEventListener('click', async () => {
+    safeAddListener(btnSaveEdit, 'click', async () => {
         if (editingIndex === -1) return;
 
         const file = currentFiles[editingIndex];
@@ -298,13 +322,19 @@ window.api.onUploadProgress((data: UploadProgress) => {
 });
 
 async function processDroppedFiles(paths: string[]) {
-    // Send paths to main process for parsing
-    const results = await window.api.parseFiles(paths);
-    
-    // Merge new results with current list
-    currentFiles = [...currentFiles, ...results];
-    renderTable();
-    updateButtons();
+    try {
+        // Send paths to main process for parsing
+        const results = await window.api.parseFiles(paths);
+        
+        // Merge new results with current list
+        currentFiles = [...currentFiles, ...results];
+        renderTable();
+        updateButtons();
+    } catch (err) {
+        console.error('Error processing files:', err);
+        window.api.log(`Error processing files: ${err}`);
+        alert('An error occurred while processing files. See logs for details.');
+    }
 }
 
 function renderTable() {

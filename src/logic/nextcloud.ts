@@ -1,12 +1,31 @@
 import { createClient, WebDAVClient } from "webdav";
-import fs from 'fs-extra';
-import path from 'path';
-import { ExportResult } from '../types';
+import fs from 'node:fs';
+import { stat } from 'node:fs/promises';
+import path from 'node:path';
+import { ExportResult } from '../types/index.js';
 
 let client: WebDAVClient | null = null;
 
 export function initializeClient(url?: string, username?: string, password?: string): boolean {
     if (!url || !username || !password) return false;
+
+    // Security Check: Enforce HTTPS unless localhost
+    try {
+        const parsedUrl = new URL(url);
+        const isLocal = parsedUrl.hostname === 'localhost' || 
+                        parsedUrl.hostname === '127.0.0.1' || 
+                        parsedUrl.hostname.startsWith('192.168.') || 
+                        parsedUrl.hostname.startsWith('10.');
+        
+        if (parsedUrl.protocol !== 'https:' && !isLocal) {
+            console.warn('[Security] Connection is not HTTPS! This is unsafe for remote transfers.');
+            // In a stricter mode, we might return false here. 
+            // For now, we warn but allow, assuming user might have a VPN/Tunnel.
+        }
+    } catch (e) {
+        console.error('[Security] Invalid URL provided');
+        return false;
+    }
     
     client = createClient(
         url,
@@ -76,7 +95,7 @@ export async function uploadFileToNextcloud(
     try {
         await ensureRemoteDir(path.dirname(remoteDestination));
         
-        const totalSize = (await fs.stat(localPath)).size;
+        const totalSize = (await stat(localPath)).size;
         console.log(`[Nextcloud] File size: ${totalSize}`);
 
         return new Promise((resolve, reject) => {
