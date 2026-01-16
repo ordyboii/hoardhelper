@@ -188,3 +188,24 @@ Based on 4px unit. Use these consistently for padding, margins, and gaps.
 - Apply `.processing` class
 - Uses `glowPulse` animation
 - Gold border on container
+
+---
+
+## Coding
+
+### Documentation
+- **Product Requirements Document (PRD):** Maintain as a high-level living document. Focus on solution value and core features. No implementation code-blocks or detailed technical data models should reside here.
+- **Backlog:** Use `backlog.md` for tracking all development tasks and future ideas.
+    - **IDs:** Format items as `### US-XXX: Title`.
+    - **Status:** Status must only be `Status: not started` or `Status: done`.
+    - **Story Format:** Include "As a... I want to... so that I can..." followed by bulleted Acceptance Criteria.
+- **Style Guide:** All UI implementations must strictly use the CSS variables and component patterns defined in `styleguide.md`. When creating a new component think carefully if you can reuse an existing component instead or leverage existing styles. Make sure to update the styleguide when a componennt is created.
+
+### Workflow
+- **User Stories:** Before starting work, ensure a corresponding User Story exists in the backlog.
+- **Updates:** When a story is implemented and verified, update its status to `Status: done` in `backlog.md`.
+- **Tests:** Create unit tests to ensure the work is working as designed.Run `npm run test` before pushing changes. Ensure all tests pass.
+- **Linting:** Run `npm run lint` before pushing changes. Ensure no linting errors.
+- **Formatting:** Run `npm run format` before pushing changes. Ensure no formatting errors.
+- **Commit Messages:** Use conventional commits format. `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`.
+- **PRs:** Reference User Story IDs in PR descriptions to maintain traceability. The following format for a PR title `US-XXX: Title` and a brief description from the acceptance criteria of the story. Use the Github CLI to open the PR.
