@@ -5,7 +5,7 @@ import { HoardTable } from './components/HoardTable';
 import { SettingsModal } from './components/SettingsModal';
 import { EditModal } from './components/EditModal';
 import { FileMetadata, Settings, UploadProgress } from './types';
-import { Settings as SettingsIcon, Trash2, UploadCloud } from 'lucide-react';
+import { Shield, Map, Package, Trash2 } from 'lucide-react';
 
 const App: React.FC = () => {
     const [files, setFiles] = useState<FileMetadata[]>([]);
@@ -22,7 +22,7 @@ const App: React.FC = () => {
             const s = await window.api.getSettings();
             setSettings({
                 ...s,
-                targetFolderTv: s.targetFolderTv || s.targetFolder || '', // Migration fallback
+                targetFolderTv: s.targetFolderTv || s.targetFolder || '',
                 targetFolderMovie: s.targetFolderMovie || s.targetFolder || ''
             });
         };
@@ -33,29 +33,10 @@ const App: React.FC = () => {
             setFiles(currentFiles => {
                 const newFiles = [...currentFiles];
                 if (newFiles[data.index]) {
-                    // Update status in a way that doesn't break the object structure
-                    // We might need a 'status' field in FileMetadata if we want to be clean, 
-                    // but for now we can leverage the 'error' field or just add a temporary status.
-                    // However, 'status' isn't in FileMetadata.
-                    // The vanilla app modified the DOM directly.
-                    // Let's assume we can set 'error' to the status message if it's not "Ready"
-                    // Or better, let's treat 'error' as a general status display field if !valid.
-                    // But if it is valid, we still want to show progress.
-                    // Let's use the 'valid' flag. If status is "Done", maybe remove it?
-                    // Actually, let's just piggyback on 'error' field for status display during upload
-                    // since the table displays: {file.valid ? 'Ready' : (file.error || 'Invalid')}
-                    // We can set valid=false temporarily to show the status message in the 'error' column slot?
-                    // Or we can assume the user sees the 'Status' column.
-                    
-                    // A better approach without changing types:
-                    // We can't easily change the type definition without breaking the main process (unless we do that too).
-                    // The vanilla renderer just updated the text content.
-                    // The table component displays: `file.valid ? 'Ready' : (file.error || 'Invalid')`
-                    // So if we set valid=false and error=`Uploading ${data.percent}%`, it shows up.
                     newFiles[data.index] = {
                         ...newFiles[data.index],
-                        valid: false, 
-                        error: data.status 
+                        valid: false,
+                        error: data.status
                     };
                 }
                 return newFiles;
@@ -76,6 +57,10 @@ const App: React.FC = () => {
 
     const handleClear = () => setFiles([]);
 
+    const handleRemoveFile = (index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
     const handleExport = async () => {
         const validFiles = files.filter(f => f.valid);
         if (validFiles.length === 0) return;
@@ -84,10 +69,10 @@ const App: React.FC = () => {
         try {
             const results = await window.api.exportFiles(validFiles);
             const failures = results.filter(r => !r.success);
-            
+
             if (failures.length === 0) {
                 alert("All treasures have been secured in the hoard!");
-                setFiles([]); // Clear on success
+                setFiles([]);
             } else {
                 alert(`Some items were lost to the abyss. Failed: ${failures.length}`);
             }
@@ -100,7 +85,6 @@ const App: React.FC = () => {
     };
 
     const handleEditSave = async (updatedFile: FileMetadata) => {
-        // Regenerate path
         const newPath = await window.api.generatePath(updatedFile);
         const finalFile = {
             ...updatedFile,
@@ -128,20 +112,22 @@ const App: React.FC = () => {
         }
     };
 
+    const validCount = files.filter(f => f.valid).length;
+
     return (
         <Layout>
-            <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 320px', 
-                gap: '20px', 
-                height: '100%', 
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 380px',
+                gap: 'var(--space-8)',
+                height: '100%',
                 overflow: 'hidden'
             }}>
-                {/* Left Column: Drop & Table */}
-                <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: '20px', 
+                {/* Left Column: Drop & Cards */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--space-8)',
                     height: '100%',
                     overflow: 'hidden'
                 }}>
@@ -149,85 +135,169 @@ const App: React.FC = () => {
                     <div style={{ flexShrink: 0 }}>
                         <DropZone onFilesDropped={handleFilesDropped} compact={files.length > 0} />
                     </div>
-                    
-                    {/* Table Area - Grows to fill remaining space */}
+
+                    {/* File Cards Area */}
                     <div style={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                        <HoardTable 
-                            files={files} 
-                            onEdit={(index) => setEditingIndex(index)} 
+                        <HoardTable
+                            files={files}
+                            onEdit={(index) => setEditingIndex(index)}
+                            onRemove={handleRemoveFile}
                         />
                     </div>
                 </div>
 
-                {/* Right Column: Actions */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
-                    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: '25px', background: 'linear-gradient(145deg, #2a2a2a, #1a1a1a)' }}>
-                        <h3 style={{ margin: '0 0 5px 0', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                             <SettingsIcon size={20} />
-                             Command Center
-                        </h3>
-                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#888' }}>
+                {/* Right Column: Command Center Sidebar */}
+                <aside style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--space-6)',
+                    overflowY: 'auto',
+                    height: 'fit-content',
+                    position: 'sticky',
+                    top: 0
+                }}>
+                    {/* Command Center Card */}
+                    <div style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: '16px',
+                        padding: 'var(--space-6)'
+                    }}>
+                        {/* Header */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--space-3)',
+                            paddingBottom: 'var(--space-4)',
+                            borderBottom: '1px solid var(--border-default)',
+                            marginBottom: 'var(--space-4)'
+                        }}>
+                            <div style={{
+                                width: '40px',
+                                height: '40px',
+                                background: 'var(--gold-glow)',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--gold-primary)'
+                            }}>
+                                <Shield size={20} />
+                            </div>
+                            <h2 style={{
+                                margin: 0,
+                                fontFamily: 'var(--font-display)',
+                                fontSize: 'var(--text-xl)',
+                                color: 'var(--gold-primary)'
+                            }}>
+                                Command Center
+                            </h2>
+                        </div>
+
+                        <p style={{
+                            color: 'var(--text-secondary)',
+                            fontSize: 'var(--text-sm)',
+                            margin: 0,
+                            marginBottom: 'var(--space-6)'
+                        }}>
                             Manage your loot and prepare for extraction.
                         </p>
-                        
-                        <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '5px 0' }} />
 
-                        <button 
-                            className="btn" 
-                            onClick={handleExport} 
-                            disabled={files.filter(f => f.valid).length === 0 || isExporting}
-                            style={{ justifyContent: 'center', padding: '12px' }}
-                        >
-                            <UploadCloud size={18} />
-                            {isExporting ? 'Securing Loot...' : 'Secure in Hoard'}
-                        </button>
+                        {/* Action Buttons */}
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 'var(--space-3)',
+                            marginBottom: 'var(--space-6)'
+                        }}>
+                            <button
+                                className="btn-primary"
+                                onClick={handleExport}
+                                disabled={validCount === 0 || isExporting}
+                            >
+                                <Shield size={18} />
+                                <span>{isExporting ? 'Securing Loot...' : 'Secure in Hoard'}</span>
+                                <span className="badge">{validCount}</span>
+                            </button>
 
-                        <button 
-                            className="btn-secondary" 
-                            onClick={handleClear}
-                            style={{ justifyContent: 'center', padding: '10px' }}
-                        >
-                            <Trash2 size={16} style={{ marginRight: '5px' }} />
-                            Jettison Cargo
-                        </button>
-                    </div>
+                            <button
+                                className="btn-secondary"
+                                onClick={handleClear}
+                                disabled={files.length === 0}
+                            >
+                                <Trash2 size={18} />
+                                <span>Jettison Cargo</span>
+                            </button>
+                        </div>
 
-                    <div className="card" style={{ background: 'rgba(20, 20, 20, 0.6)' }}>
-                        <h3 style={{ margin: '0 0 15px 0', color: 'var(--text-muted)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                            Navigation
-                        </h3>
-                        <button 
-                            className="btn-secondary" 
-                            onClick={() => setIsSettingsOpen(true)}
-                            style={{ width: '100%', justifyContent: 'flex-start', border: 'none', background: 'transparent', padding: '10px 0', borderBottom: '1px solid #333' }}
-                        >
-                            <SettingsIcon size={16} style={{ marginRight: '10px', color: 'var(--color-gold)' }} />
-                            Map Configuration
-                        </button>
-                    </div>
-                    
-                    {/* Status Log / Decorative */}
-                    <div style={{ flexGrow: 1, display: 'flex', alignItems: 'flex-end', opacity: 0.3 }}>
-                        <div style={{ border: '1px solid var(--color-gold-dim)', padding: '10px', borderRadius: '4px', width: '100%' }}>
-                            <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--color-gold)', fontFamily: 'monospace' }}>
-                                SYSTEM_STATUS: ONLINE<br/>
-                                DRAGON_SLEEP: ACTIVE<br/>
-                                HOARD_INTEGRITY: 100%
-                            </p>
+                        {/* Navigation */}
+                        <div style={{
+                            paddingTop: 'var(--space-6)',
+                            borderTop: '1px solid var(--border-default)'
+                        }}>
+                            <div style={{
+                                color: 'var(--text-tertiary)',
+                                fontSize: 'var(--text-xs)',
+                                fontWeight: 'var(--weight-semibold)',
+                                letterSpacing: '0.5px',
+                                marginBottom: 'var(--space-3)',
+                                textTransform: 'uppercase'
+                            }}>
+                                Navigation
+                            </div>
+                            <button
+                                className="nav-link"
+                                onClick={() => setIsSettingsOpen(true)}
+                            >
+                                <Map size={18} style={{ color: 'var(--gold-primary)' }} />
+                                <span>Map Configuration</span>
+                            </button>
                         </div>
                     </div>
-                </div>
+
+                    {/* System Status */}
+                    <div style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: '16px',
+                        padding: 'var(--space-6)'
+                    }}>
+                        <div style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 'var(--text-xs)',
+                            lineHeight: 1.8,
+                            color: 'var(--text-tertiary)'
+                        }}>
+                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                <span>SYSTEM_STATUS:</span>
+                                <span style={{ color: 'var(--success)' }}>ONLINE</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                <span>DRAGON_SLEEP:</span>
+                                <span style={{ color: 'var(--success)' }}>ACTIVE</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                <span>HOARD_INTEGRITY:</span>
+                                <span style={{ color: 'var(--success)' }}>100%</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                <span>FILES_PENDING:</span>
+                                <span style={{ color: files.length > 0 ? 'var(--warning)' : 'var(--success)' }}>{files.length}</span>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
             </div>
 
-            <SettingsModal 
-                isOpen={isSettingsOpen} 
+            <SettingsModal
+                isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
                 initialSettings={settings}
                 onSave={handleSaveSettings}
                 onTestConnection={window.api.testConnection}
             />
 
-            <EditModal 
+            <EditModal
                 isOpen={editingIndex !== null}
                 file={editingIndex !== null ? files[editingIndex] : null}
                 onClose={() => setEditingIndex(null)}

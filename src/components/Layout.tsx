@@ -1,6 +1,5 @@
 import React from 'react';
-import { Ghost as Dragon } from 'lucide-react'; // Lucide doesn't have a Dragon, Ghost is close enough or I'll use a Crown/Gem
-import { Coins } from 'lucide-react';
+import { Package } from 'lucide-react';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -13,33 +12,67 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            background: 'radial-gradient(circle at top right, #1a1a00, var(--bg-app))'
+            background: 'var(--bg-primary)'
         }}>
             <header style={{
-                padding: '20px',
-                borderBottom: '1px solid var(--border-gold)',
+                padding: 'var(--space-6) var(--space-8)',
+                borderBottom: '1px solid var(--border-default)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '15px',
-                background: 'rgba(20, 20, 20, 0.9)',
+                justifyContent: 'space-between',
+                background: 'rgba(10, 10, 10, 0.95)',
+                backdropFilter: 'blur(12px)',
                 flexShrink: 0
             }}>
-                <Dragon size={32} color="var(--color-gold)" />
-                <div>
-                    <h1 style={{ margin: 0, color: 'var(--color-gold)', fontSize: '1.5rem', letterSpacing: '1px' }}>
-                        HOARDHELPER
-                    </h1>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        Organize your digital treasures
-                    </span>
+                {/* Logo Section */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                    <div style={{
+                        width: '44px',
+                        height: '44px',
+                        background: 'linear-gradient(135deg, var(--gold-dark), var(--gold-primary))',
+                        borderRadius: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 12px var(--gold-glow)'
+                    }}>
+                        <Package size={24} color="var(--bg-primary)" />
+                    </div>
+                    <div>
+                        <h1 style={{
+                            margin: 0,
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 'var(--text-2xl)',
+                            color: 'var(--gold-primary)',
+                            fontWeight: 'var(--weight-bold)',
+                            letterSpacing: '0.5px'
+                        }}>
+                            HOARDHELPER
+                        </h1>
+                        <span style={{
+                            fontSize: 'var(--text-xs)',
+                            color: 'var(--text-tertiary)'
+                        }}>
+                            Organize your digital treasures
+                        </span>
+                    </div>
                 </div>
-                <div style={{ flexGrow: 1 }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <Coins size={20} color="var(--color-gold-dim)" />
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-gold)' }}>Status: Active</span>
+
+                {/* Status Badge */}
+                <div className="status-badge status-active">
+                    <div className="status-dot"></div>
+                    Status: Active
                 </div>
             </header>
-            <main style={{ flexGrow: 1, padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', overflow: 'hidden' }}>
+
+            <main style={{
+                flexGrow: 1,
+                padding: 'var(--space-8)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-8)',
+                overflow: 'hidden'
+            }}>
                 {children}
             </main>
         </div>

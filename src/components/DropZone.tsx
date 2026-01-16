@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { DownloadCloud, Sparkles } from 'lucide-react';
+import { Gem, Sparkles } from 'lucide-react';
 
 interface DropZoneProps {
     onFilesDropped: (files: File[]) => void;
@@ -26,7 +26,7 @@ export const DropZone: React.FC<DropZoneProps> = ({ onFilesDropped, compact = fa
         e.preventDefault();
         e.stopPropagation();
         setIsHovering(false);
-        
+
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             onFilesDropped(Array.from(e.dataTransfer.files));
         }
@@ -43,48 +43,98 @@ export const DropZone: React.FC<DropZoneProps> = ({ onFilesDropped, compact = fa
     };
 
     return (
-        <div 
+        <div
             onClick={handleClick}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`card dragon-border ${isHovering ? 'hover' : ''}`}
-            style={{ 
-                borderStyle: 'dashed', 
-                borderWidth: '2px', 
-                textAlign: 'center', 
-                padding: compact ? '20px' : '60px',
+            style={{
+                border: `2px dashed ${isHovering ? 'var(--gold-primary)' : 'var(--border-default)'}`,
+                borderRadius: '16px',
+                padding: compact ? 'var(--space-5) var(--space-6)' : 'var(--space-16) var(--space-12)',
+                textAlign: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                backgroundColor: isHovering ? 'rgba(255, 215, 0, 0.08)' : 'rgba(20, 20, 20, 0.5)',
+                background: isHovering
+                    ? 'radial-gradient(circle at center, rgba(212, 175, 55, 0.05) 0%, rgba(10, 10, 10, 0.9) 100%)'
+                    : 'radial-gradient(circle at center, rgba(26, 26, 26, 0.8) 0%, rgba(10, 10, 10, 0.9) 100%)',
+                boxShadow: isHovering ? 'inset 0 0 48px var(--gold-glow)' : 'none',
                 display: 'flex',
                 flexDirection: compact ? 'row' : 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '15px'
+                gap: compact ? 'var(--space-4)' : 'var(--space-6)',
+                position: 'relative',
+                overflow: 'hidden'
             }}
         >
-            <input 
-                type="file" 
-                multiple 
-                ref={fileInputRef} 
-                style={{ display: 'none' }} 
+            {/* Shimmer effect on hover */}
+            {isHovering && (
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.1) 50%, transparent 100%)',
+                    animation: 'shimmer 1.5s ease infinite',
+                    pointerEvents: 'none'
+                }} />
+            )}
+
+            <input
+                type="file"
+                multiple
+                ref={fileInputRef}
+                style={{ display: 'none' }}
                 onChange={handleFileSelect}
             />
-            
-            {isHovering ? (
-                <Sparkles size={compact ? 32 : 64} color="var(--color-gold)" className="animate-pulse" />
-            ) : (
-                <DownloadCloud size={compact ? 32 : 64} color="var(--color-gold-dim)" />
-            )}
-            
-            <div style={{ textAlign: compact ? 'left' : 'center' }}>
-                <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: compact ? '1rem' : '1.5rem' }}>
-                    {isHovering ? "Grant Offering!" : (compact ? "Add More Artifacts" : "Present Your Treasures")}
+
+            {/* Icon wrapper with gradient */}
+            <div style={{
+                width: compact ? '48px' : '80px',
+                height: compact ? '48px' : '80px',
+                background: 'linear-gradient(135deg, var(--gold-primary), var(--gold-light))',
+                borderRadius: compact ? '12px' : '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 8px 24px var(--gold-glow)',
+                transition: 'transform 0.3s ease',
+                transform: isHovering ? 'translateY(-4px) scale(1.05)' : 'none',
+                flexShrink: 0
+            }}>
+                {isHovering ? (
+                    <Sparkles size={compact ? 24 : 40} color="var(--bg-primary)" />
+                ) : (
+                    <Gem size={compact ? 24 : 40} color="var(--bg-primary)" />
+                )}
+            </div>
+
+            <div style={{ textAlign: compact ? 'left' : 'center', position: 'relative', zIndex: 1 }}>
+                <h3 style={{
+                    margin: 0,
+                    fontFamily: 'var(--font-display)',
+                    color: 'var(--gold-primary)',
+                    fontSize: compact ? 'var(--text-lg)' : 'var(--text-3xl)',
+                    marginBottom: compact ? 'var(--space-1)' : 'var(--space-3)'
+                }}>
+                    {isHovering ? "Release Your Treasures!" : (compact ? "Add More Artifacts" : "Present Your Treasures")}
                 </h3>
-                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: compact ? '0.8rem' : '1rem' }}>
+                <p style={{
+                    margin: 0,
+                    color: 'var(--text-secondary)',
+                    fontSize: compact ? 'var(--text-sm)' : 'var(--text-base)',
+                    marginBottom: compact ? 0 : 'var(--space-4)'
+                }}>
                     {compact ? "Drag & drop or click" : "Drag files here to appraise"}
                 </p>
+                {!compact && (
+                    <p style={{
+                        margin: 0,
+                        color: 'var(--text-tertiary)',
+                        fontSize: 'var(--text-sm)'
+                    }}>
+                        Supported formats: MP4, MKV, AVI, MOV
+                    </p>
+                )}
             </div>
         </div>
     );
