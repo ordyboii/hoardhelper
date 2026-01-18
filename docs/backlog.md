@@ -422,3 +422,83 @@ As a user, I want to know if a file I uploaded is still on Nextcloud, so I can d
 - [ ] Background job to crawl Nextcloud remote folder.
 - [ ] Comparison against local database.
 - [ ] Alert user to "Missing" files that were previously uploaded.
+
+---
+
+## Epic: UI Refactor
+
+Modernize the interface with sidebar-based navigation.
+
+### US-039: Sidebar Navigation Layout with Accessibility
+**Status:** done
+
+As a user, I want a sidebar-based navigation layout with full keyboard accessibility, so that I can easily switch between different views (Loot, Extraction, Secure, Map) with a consistent and modern interface that works for all users.
+
+**Acceptance Criteria:**
+- [x] Sidebar component with navigation items for Loot, Extraction, Secure, and Map views.
+- [x] View-based routing renders appropriate content for each navigation item.
+- [x] Mobile responsive with drawer pattern and backdrop overlay.
+- [x] System status card in sidebar footer showing connection status.
+- [x] Active count badge on Extraction nav item.
+- [x] Layout matches the prototype design aesthetic.
+- [x] **WCAG 2.2 AA Compliance:**
+  - [x] All interactive elements have visible focus indicators (gold outline + glow).
+  - [x] Focus states mirror hover states for consistency.
+  - [x] Keyboard navigation works throughout (Tab, Enter, Escape).
+  - [x] ARIA labels on icon-only buttons.
+  - [x] Color contrast ratios meet AA standards.
+- [x] **Full-View Editing (No Modals):**
+  - [x] Clicking "Edit" replaces the main content area with an Edit Form View.
+  - [x] Edit Form includes: Type toggle (TV/Movie), Title/Series, Season/Episode fields.
+  - [x] Back button returns to the previous view with updated data.
+  - [x] Escape key cancels editing and returns to previous view.
+
+### US-040: Secure Status History with Retry
+**Status:** done
+
+As a user, I want to see a history of all my uploads with the ability to retry failed ones, so that I can track what's been secured and recover from failures.
+
+**Acceptance Criteria:**
+- [x] Files move to Secure Status view after upload (success or failure).
+- [x] Total Secured card shows success count / total processed (X/Y format).
+- [x] Recent Activity shows all uploads with status icons (success/failed).
+- [x] Failed uploads have a "Retry" button.
+- [x] Retry moves file back to Extraction queue.
+- [x] Successful retries update the success count but not the total processed.
+- [x] Activity list sorted by most recent first.
+- [x] All icons have ARIA labels or screen reader text (WCAG 2.2 compliant).
+
+### US-041: Sidebar Reorganization
+**Status:** done
+
+As a user, I want the Settings (Map) moved to the sidebar footer as a link, so that the main navigation focuses on primary workflows.
+
+**Acceptance Criteria:**
+- [x] Map removed from main navigation items.
+- [x] Settings link added to sidebar footer above System Status.
+- [x] System Status card retained showing Nextcloud connection.
+- [x] Storage usage bar removed (not useful).
+
+### US-042: WCAG 2.2 Contrast Compliance
+**Status:** done
+
+As a user, I want text to have sufficient contrast ratios, so that the application is accessible and readable.
+
+**Acceptance Criteria:**
+- [x] `--text-secondary` updated to `#b0b0b0` (5.1:1 contrast ratio).
+- [x] `--text-tertiary` updated to `#8a8a8a` (4.5:1 contrast ratio).
+- [x] Style guide updated with contrast ratio documentation.
+
+### US-043: Extraction Queue Table Improvements
+**Status:** done
+
+As a user, I want a cleaner extraction queue table with better responsiveness, so that I can read file information without columns bleeding off screen.
+
+**Acceptance Criteria:**
+- [x] Status column removed.
+- [x] Arrow icon removed from proposed standard.
+- [x] Table restructured to 4 columns: Type, Original, Proposed, Actions.
+- [x] Horizontal overflow enabled for narrow screens.
+- [x] Column widths optimized (narrow Type column, adequate text space).
+- [x] Actions column always visible.
+

@@ -1,3 +1,17 @@
+export enum ViewState {
+    Loot = 'Loot',
+    Extraction = 'Extraction',
+    Secure = 'Secure',
+    Map = 'Map'
+}
+
+export enum FileStatus {
+    Ready = 'Ready',
+    Processing = 'Processing',
+    Secured = 'Secured',
+    Error = 'Error'
+}
+
 export interface ParseResult {
     type?: 'tv' | 'movie';
     series: string;
@@ -14,6 +28,15 @@ export interface FileMetadata extends ParseResult {
     proposed: string | null;
     valid: boolean;
     error?: string;
+    _retryId?: string; // Internal: tracks if this is a retry of a previous upload
+}
+
+export interface HistoryItem extends FileMetadata {
+    id: string;                           // Unique ID for tracking retries
+    uploadedAt: Date;                     // When the upload completed
+    uploadStatus: 'success' | 'failed';   // Final status
+    errorMessage?: string;                // Error details if failed
+    isRetry: boolean;                     // Was this a retry attempt?
 }
 
 export interface Settings {

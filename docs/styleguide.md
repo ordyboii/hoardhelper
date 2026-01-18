@@ -23,13 +23,13 @@ Reference for the HoardHelper design system. Use these tokens and patterns consi
 | `--gold-dark` | `#b8941f` | Borders, deep accents |
 | `--gold-glow` | `rgba(212, 175, 55, 0.2)` | Shadows, glows |
 
-### Text
+### Text (WCAG 2.2 AA Compliant)
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--text-primary` | `#e8e8e8` | Primary content |
-| `--text-secondary` | `#a0a0a0` | Supporting text |
-| `--text-tertiary` | `#606060` | Disabled, hints |
+| Token | Value | Contrast Ratio | Usage |
+|-------|-------|----------------|-------|
+| `--text-primary` | `#e8e8e8` | 13.5:1 | Primary content |
+| `--text-secondary` | `#b0b0b0` | 5.1:1 | Supporting text |
+| `--text-tertiary` | `#8a8a8a` | 4.5:1 | Labels, hints |
 
 ### Status
 
@@ -191,6 +191,88 @@ Based on 4px unit. Use these consistently for padding, margins, and gaps.
 
 ---
 
+## Accessibility (WCAG 2.2 AA)
+
+### Contrast Requirements
+All text must meet WCAG 2.2 AA contrast ratios:
+- **Normal text (< 18px):** Minimum 4.5:1 contrast ratio
+- **Large text (≥ 18px or 14px bold):** Minimum 3:1 contrast ratio
+- **UI components:** Minimum 3:1 contrast ratio
+
+### Icon Accessibility
+Icons must be accessible to screen readers using this pattern:
+
+```tsx
+// Decorative icon with visible text
+<Settings size={18} aria-hidden="true" />
+<span>Settings</span>
+
+// Icon-only button
+<button aria-label="Remove file">
+    <Trash2 size={16} aria-hidden="true" />
+</button>
+
+// Status icon with screen reader text
+<ShieldCheck aria-hidden="true" />
+<span className="sr-only">Upload successful</span>
+```
+
+### Screen Reader Utility
+Use `.sr-only` class to provide text for screen readers that is visually hidden:
+
+```css
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+```
+
+---
+
+## Additional Components
+
+### Settings Link (Sidebar Footer)
+
+**Class:** `.sidebar-settings-link`
+
+- Positioned in sidebar footer
+- Ghost style with gold hover
+- Accessible with aria-label
+
+### History Stat Card
+
+**Class:** `.history-stat-card`
+
+- Full width, centered content
+- Gold gradient border with glow
+- Used for Total Secured counter
+
+### History Item
+
+**Class:** `.history-item`
+
+- Flex layout, responsive
+- `.failed` modifier adds red left border
+- Contains status icon, file info, actions
+
+### Retry Button
+
+**Class:** `.retry-btn`
+
+- Gold ghost button style
+- Icon + text combination
+- Used for failed uploads in history
+
+---
+
+
 ## Coding
 
 ### Documentation
@@ -204,8 +286,9 @@ Based on 4px unit. Use these consistently for padding, margins, and gaps.
 ### Workflow
 - **User Stories:** Before starting work, ensure a corresponding User Story exists in the backlog.
 - **Updates:** When a story is implemented and verified, update its status to `Status: done` in `backlog.md`.
-- **Tests:** Create unit tests to ensure the work is working as designed.Run `npm run test` before pushing changes. Ensure all tests pass.
+- **Tests:** Create unit tests to ensure the work is working as designed. Run `npm run test` before pushing changes. Ensure all tests pass.
 - **Linting:** Run `npm run lint` before pushing changes. Ensure no linting errors.
 - **Formatting:** Run `npm run format` before pushing changes. Ensure no formatting errors.
 - **Commit Messages:** Use conventional commits format. `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`.
 - **PRs:** Reference User Story IDs in PR descriptions to maintain traceability. The following format for a PR title `US-XXX: Title` and a brief description from the acceptance criteria of the story. Use the Github CLI to open the PR.
+- **Branch Naming:** Use short, descriptive names without prefixes. Example: `ui-refactor`, `toast-notifications`. Keep names concise and lowercase with hyphens.

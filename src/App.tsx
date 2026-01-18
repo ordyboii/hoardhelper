@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Layout } from './components/Layout';
+import { Sidebar } from './components/Sidebar';
 import { DropZone } from './components/DropZone';
-import { HoardTable } from './components/HoardTable';
-import { SettingsModal } from './components/SettingsModal';
-import { EditModal } from './components/EditModal';
-import { FileMetadata, Settings, UploadProgress } from './types';
-import { Shield, Map, Package, Trash2 } from 'lucide-react';
+import { QueueList } from './components/QueueList';
+import { EditView } from './components/EditView';
+import { SecureStatusView } from './components/SecureStatusView';
+import { SettingsView } from './components/SettingsView';
+import { FileMetadata, HistoryItem, Settings, UploadProgress, ViewState } from './types';
+import { HardDrive, Menu } from 'lucide-react';
+
+// Helper to generate unique IDs
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 const App: React.FC = () => {
     const [files, setFiles] = useState<FileMetadata[]>([]);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [history, setHistory] = useState<HistoryItem[]>([]);
+    const [currentView, setCurrentView] = useState<ViewState>(ViewState.Loot);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [isExporting, setIsExporting] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
     const [settings, setSettings] = useState<Settings>({
         url: '', targetFolderTv: '', targetFolderMovie: '', username: '', password: ''
     });
@@ -30,6 +37,11 @@ const App: React.FC = () => {
 
         // Setup Progress Listener
         window.api.onUploadProgress((data: UploadProgress) => {
+            setUploadProgress(prev => ({
+                ...prev,
+                [data.index]: data.percent
+            }));
+
             setFiles(currentFiles => {
                 const newFiles = [...currentFiles];
                 if (newFiles[data.index]) {
@@ -49,16 +61,26 @@ const App: React.FC = () => {
         try {
             const results = await window.api.parseFiles(paths);
             setFiles(prev => [...prev, ...results]);
+            // Navigate to Extraction view after files are added
+            setTimeout(() => setCurrentView(ViewState.Extraction), 300);
         } catch (err) {
             console.error(err);
             alert("Failed to parse files.");
         }
     };
 
-    const handleClear = () => setFiles([]);
+    const handleClear = () => {
+        setFiles([]);
+        setUploadProgress({});
+    };
 
     const handleRemoveFile = (index: number) => {
         setFiles(prev => prev.filter((_, i) => i !== index));
+        setUploadProgress(prev => {
+            const newProgress = { ...prev };
+            delete newProgress[index];
+            return newProgress;
+        });
     };
 
     const handleExport = async () => {
@@ -66,22 +88,72 @@ const App: React.FC = () => {
         if (validFiles.length === 0) return;
 
         setIsExporting(true);
+        setUploadProgress({});
+
         try {
             const results = await window.api.exportFiles(validFiles);
-            const failures = results.filter(r => !r.success);
 
-            if (failures.length === 0) {
-                alert("All treasures have been secured in the hoard!");
-                setFiles([]);
-            } else {
-                alert(`Some items were lost to the abyss. Failed: ${failures.length}`);
-            }
+            // Create history items from the results
+            const now = new Date();
+            const newHistoryItems: HistoryItem[] = validFiles.map((file, index) => {
+                const result = results[index];
+                const isRetry = !!file._retryId;
+
+                return {
+                    ...file,
+                    id: file._retryId || generateId(), // Reuse ID if retry, else new ID
+                    uploadedAt: now,
+                    uploadStatus: result.success ? 'success' : 'failed',
+                    errorMessage: result.error,
+                    isRetry,
+                    _retryId: undefined, // Clear the retry marker
+                };
+            });
+
+            // Add to history (most recent first)
+            setHistory(prev => [...newHistoryItems, ...prev]);
+
+            // Clear files from queue
+            setFiles([]);
+            setUploadProgress({});
+
+            // Navigate to Secure view to show results
+            setTimeout(() => setCurrentView(ViewState.Secure), 300);
+
         } catch (error) {
             console.error(error);
             alert("Critical failure during export.");
         } finally {
             setIsExporting(false);
         }
+    };
+
+    const handleRetry = (historyItem: HistoryItem) => {
+        // Re-enable file for queue
+        const retryFile: FileMetadata = {
+            type: historyItem.type,
+            series: historyItem.series,
+            season: historyItem.season,
+            episode: historyItem.episode,
+            formattedSeason: historyItem.formattedSeason,
+            formattedEpisode: historyItem.formattedEpisode,
+            ext: historyItem.ext,
+            originalName: historyItem.originalName,
+            fullPath: historyItem.fullPath,
+            proposed: historyItem.proposed,
+            valid: true, // Re-enable for queue
+            error: undefined,
+            _retryId: historyItem.id, // Track this as a retry
+        };
+
+        // Add back to files queue
+        setFiles(prev => [...prev, retryFile]);
+
+        // Remove from history (will re-add on completion)
+        setHistory(prev => prev.filter(h => h.id !== historyItem.id));
+
+        // Navigate to extraction
+        setCurrentView(ViewState.Extraction);
     };
 
     const handleEditSave = async (updatedFile: FileMetadata) => {
@@ -100,6 +172,7 @@ const App: React.FC = () => {
                 return newFiles;
             });
         }
+        setEditingIndex(null);
     };
 
     const handleSaveSettings = async (newSettings: Settings) => {
@@ -114,196 +187,107 @@ const App: React.FC = () => {
 
     const validCount = files.filter(f => f.valid).length;
 
+    // Render content based on current view or editing state
+    const renderContent = () => {
+        // If editing, show EditView instead of current view
+        if (editingIndex !== null && files[editingIndex]) {
+            return (
+                <EditView
+                    file={files[editingIndex]}
+                    onSave={handleEditSave}
+                    onCancel={() => setEditingIndex(null)}
+                />
+            );
+        }
+
+        switch (currentView) {
+            case ViewState.Loot:
+                return (
+                    <DropZone
+                        onFilesDropped={handleFilesDropped}
+                        fileCount={files.length}
+                        onClear={handleClear}
+                    />
+                );
+            case ViewState.Extraction:
+                return (
+                    <QueueList
+                        files={files}
+                        onEdit={(index) => setEditingIndex(index)}
+                        onRemove={handleRemoveFile}
+                        onProcess={handleExport}
+                        isProcessing={isExporting}
+                        progress={uploadProgress}
+                    />
+                );
+            case ViewState.Secure:
+                return (
+                    <SecureStatusView
+                        history={history}
+                        onRetry={handleRetry}
+                    />
+                );
+            case ViewState.Map:
+                return (
+                    <SettingsView
+                        initialSettings={settings}
+                        onSave={handleSaveSettings}
+                        onTestConnection={window.api.testConnection}
+                    />
+                );
+            default:
+                return (
+                    <DropZone
+                        onFilesDropped={handleFilesDropped}
+                        fileCount={files.length}
+                        onClear={handleClear}
+                    />
+                );
+        }
+    };
+
     return (
-        <Layout>
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 380px',
-                gap: 'var(--space-8)',
-                height: '100%',
-                overflow: 'hidden'
-            }}>
-                {/* Left Column: Drop & Cards */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 'var(--space-8)',
-                    height: '100%',
-                    overflow: 'hidden'
-                }}>
-                    {/* Collapsible Drop Zone */}
-                    <div style={{ flexShrink: 0 }}>
-                        <DropZone onFilesDropped={handleFilesDropped} compact={files.length > 0} />
-                    </div>
+        <div className="app-container">
+            {isSidebarOpen && (
+                <div
+                    className="sidebar-backdrop"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
 
-                    {/* File Cards Area */}
-                    <div style={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                        <HoardTable
-                            files={files}
-                            onEdit={(index) => setEditingIndex(index)}
-                            onRemove={handleRemoveFile}
-                        />
-                    </div>
-                </div>
+            <Sidebar
+                currentView={currentView}
+                onChangeView={setCurrentView}
+                itemCount={validCount}
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+            />
 
-                {/* Right Column: Command Center Sidebar */}
-                <aside style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 'var(--space-6)',
-                    overflowY: 'auto',
-                    height: 'fit-content',
-                    position: 'sticky',
-                    top: 0
-                }}>
-                    {/* Command Center Card */}
-                    <div style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border-default)',
-                        borderRadius: '16px',
-                        padding: 'var(--space-6)'
-                    }}>
-                        {/* Header */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 'var(--space-3)',
-                            paddingBottom: 'var(--space-4)',
-                            borderBottom: '1px solid var(--border-default)',
-                            marginBottom: 'var(--space-4)'
-                        }}>
-                            <div style={{
-                                width: '40px',
-                                height: '40px',
-                                background: 'var(--gold-glow)',
-                                borderRadius: '8px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--gold-primary)'
-                            }}>
-                                <Shield size={20} />
-                            </div>
-                            <h2 style={{
-                                margin: 0,
-                                fontFamily: 'var(--font-display)',
-                                fontSize: 'var(--text-xl)',
-                                color: 'var(--gold-primary)'
-                            }}>
-                                Command Center
-                            </h2>
+            <div className="main-content">
+                <div className="gradient-spot" />
+
+                {/* Mobile Header */}
+                <header className="mobile-header">
+                    <div className="mobile-header-logo">
+                        <div className="mobile-header-icon">
+                            <HardDrive size={20} aria-hidden="true" />
                         </div>
-
-                        <p style={{
-                            color: 'var(--text-secondary)',
-                            fontSize: 'var(--text-sm)',
-                            margin: 0,
-                            marginBottom: 'var(--space-6)'
-                        }}>
-                            Manage your loot and prepare for extraction.
-                        </p>
-
-                        {/* Action Buttons */}
-                        <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 'var(--space-3)',
-                            marginBottom: 'var(--space-6)'
-                        }}>
-                            <button
-                                className="btn-primary"
-                                onClick={handleExport}
-                                disabled={validCount === 0 || isExporting}
-                            >
-                                <Shield size={18} />
-                                <span>{isExporting ? 'Securing Loot...' : 'Secure in Hoard'}</span>
-                                <span className="badge">{validCount}</span>
-                            </button>
-
-                            <button
-                                className="btn-secondary"
-                                onClick={handleClear}
-                                disabled={files.length === 0}
-                            >
-                                <Trash2 size={18} />
-                                <span>Jettison Cargo</span>
-                            </button>
-                        </div>
-
-                        {/* Navigation */}
-                        <div style={{
-                            paddingTop: 'var(--space-6)',
-                            borderTop: '1px solid var(--border-default)'
-                        }}>
-                            <div style={{
-                                color: 'var(--text-tertiary)',
-                                fontSize: 'var(--text-xs)',
-                                fontWeight: 'var(--weight-semibold)',
-                                letterSpacing: '0.5px',
-                                marginBottom: 'var(--space-3)',
-                                textTransform: 'uppercase'
-                            }}>
-                                Navigation
-                            </div>
-                            <button
-                                className="nav-link"
-                                onClick={() => setIsSettingsOpen(true)}
-                            >
-                                <Map size={18} style={{ color: 'var(--gold-primary)' }} />
-                                <span>Map Configuration</span>
-                            </button>
-                        </div>
+                        <h1 className="mobile-header-title">HoardHelper</h1>
                     </div>
+                    <button
+                        className="mobile-menu-btn"
+                        onClick={() => setIsSidebarOpen(true)}
+                        aria-label="Open menu"
+                    >
+                        <Menu size={24} aria-hidden="true" />
+                    </button>
+                </header>
 
-                    {/* System Status */}
-                    <div style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border-default)',
-                        borderRadius: '16px',
-                        padding: 'var(--space-6)'
-                    }}>
-                        <div style={{
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: 'var(--text-xs)',
-                            lineHeight: 1.8,
-                            color: 'var(--text-tertiary)'
-                        }}>
-                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                                <span>SYSTEM_STATUS:</span>
-                                <span style={{ color: 'var(--success)' }}>ONLINE</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                                <span>DRAGON_SLEEP:</span>
-                                <span style={{ color: 'var(--success)' }}>ACTIVE</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                                <span>HOARD_INTEGRITY:</span>
-                                <span style={{ color: 'var(--success)' }}>100%</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                                <span>FILES_PENDING:</span>
-                                <span style={{ color: files.length > 0 ? 'var(--warning)' : 'var(--success)' }}>{files.length}</span>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
+                <main className="main-content-inner">
+                    {renderContent()}
+                </main>
             </div>
-
-            <SettingsModal
-                isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
-                initialSettings={settings}
-                onSave={handleSaveSettings}
-                onTestConnection={window.api.testConnection}
-            />
-
-            <EditModal
-                isOpen={editingIndex !== null}
-                file={editingIndex !== null ? files[editingIndex] : null}
-                onClose={() => setEditingIndex(null)}
-                onSave={handleEditSave}
-            />
-        </Layout>
+        </div>
     );
 };
 

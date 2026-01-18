@@ -1,12 +1,17 @@
 import React, { useRef, useState } from 'react';
-import { Gem, Sparkles } from 'lucide-react';
+import { UploadCloud, FileVideo, HardDrive, AlertCircle, Trash2 } from 'lucide-react';
 
 interface DropZoneProps {
     onFilesDropped: (files: File[]) => void;
-    compact?: boolean;
+    fileCount?: number;
+    onClear?: () => void;
 }
 
-export const DropZone: React.FC<DropZoneProps> = ({ onFilesDropped, compact = false }) => {
+export const DropZone: React.FC<DropZoneProps> = ({
+    onFilesDropped,
+    fileCount = 0,
+    onClear
+}) => {
     const [isHovering, setIsHovering] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,98 +48,99 @@ export const DropZone: React.FC<DropZoneProps> = ({ onFilesDropped, compact = fa
     };
 
     return (
-        <div
-            onClick={handleClick}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            style={{
-                border: `2px dashed ${isHovering ? 'var(--gold-primary)' : 'var(--border-default)'}`,
-                borderRadius: '16px',
-                padding: compact ? 'var(--space-5) var(--space-6)' : 'var(--space-16) var(--space-12)',
-                textAlign: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                background: isHovering
-                    ? 'radial-gradient(circle at center, rgba(212, 175, 55, 0.05) 0%, rgba(10, 10, 10, 0.9) 100%)'
-                    : 'radial-gradient(circle at center, rgba(26, 26, 26, 0.8) 0%, rgba(10, 10, 10, 0.9) 100%)',
-                boxShadow: isHovering ? 'inset 0 0 48px var(--gold-glow)' : 'none',
-                display: 'flex',
-                flexDirection: compact ? 'row' : 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: compact ? 'var(--space-4)' : 'var(--space-6)',
-                position: 'relative',
-                overflow: 'hidden'
-            }}
-        >
-            {/* Shimmer effect on hover */}
-            {isHovering && (
-                <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.1) 50%, transparent 100%)',
-                    animation: 'shimmer 1.5s ease infinite',
-                    pointerEvents: 'none'
-                }} />
-            )}
+        <div className="view-container drop-zone-container">
+            <header className="view-header">
+                <div className="view-header-row">
+                    <div>
+                        <h2 className="view-title">Loot Inventory</h2>
+                        <p className="view-description">Add treasures to your hoard for processing.</p>
+                    </div>
+                    {fileCount > 0 && onClear && (
+                        <button
+                            className="btn-secondary"
+                            onClick={onClear}
+                            style={{ width: 'auto' }}
+                        >
+                            <Trash2 size={18} />
+                            Clear All
+                        </button>
+                    )}
+                </div>
+            </header>
 
-            <input
-                type="file"
-                multiple
-                ref={fileInputRef}
-                style={{ display: 'none' }}
-                onChange={handleFileSelect}
-            />
+            <div
+                className={`drop-zone-area ${isHovering ? 'active' : ''}`}
+                onClick={handleClick}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleClick();
+                    }
+                }}
+                aria-label="Drop files here or click to browse"
+            >
+                <div className="drop-zone-glow" />
 
-            {/* Icon wrapper with gradient */}
-            <div style={{
-                width: compact ? '48px' : '80px',
-                height: compact ? '48px' : '80px',
-                background: 'linear-gradient(135deg, var(--gold-primary), var(--gold-light))',
-                borderRadius: compact ? '12px' : '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 8px 24px var(--gold-glow)',
-                transition: 'transform 0.3s ease',
-                transform: isHovering ? 'translateY(-4px) scale(1.05)' : 'none',
-                flexShrink: 0
-            }}>
-                {isHovering ? (
-                    <Sparkles size={compact ? 24 : 40} color="var(--bg-primary)" />
-                ) : (
-                    <Gem size={compact ? 24 : 40} color="var(--bg-primary)" />
-                )}
+                <input
+                    type="file"
+                    multiple
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleFileSelect}
+                    accept=".mkv,.mp4,.avi,.mov"
+                />
+
+                <div className="drop-zone-icon">
+                    <UploadCloud />
+                </div>
+
+                <div className="drop-zone-content">
+                    <h3 className="drop-zone-title">
+                        {isHovering ? 'Release to add files' : 'Drag & Drop treasures here'}
+                    </h3>
+                    <p className="drop-zone-subtitle">
+                        Supports <code>.mkv</code>, <code>.mp4</code>, <code>.avi</code>. Files will be automatically analyzed.
+                    </p>
+                </div>
             </div>
 
-            <div style={{ textAlign: compact ? 'left' : 'center', position: 'relative', zIndex: 1 }}>
-                <h3 style={{
-                    margin: 0,
-                    fontFamily: 'var(--font-display)',
-                    color: 'var(--gold-primary)',
-                    fontSize: compact ? 'var(--text-lg)' : 'var(--text-3xl)',
-                    marginBottom: compact ? 'var(--space-1)' : 'var(--space-3)'
-                }}>
-                    {isHovering ? "Release Your Treasures!" : (compact ? "Add More Artifacts" : "Present Your Treasures")}
-                </h3>
-                <p style={{
-                    margin: 0,
-                    color: 'var(--text-secondary)',
-                    fontSize: compact ? 'var(--text-sm)' : 'var(--text-base)',
-                    marginBottom: compact ? 0 : 'var(--space-4)'
-                }}>
-                    {compact ? "Drag & drop or click" : "Drag files here to appraise"}
-                </p>
-                {!compact && (
-                    <p style={{
-                        margin: 0,
-                        color: 'var(--text-tertiary)',
-                        fontSize: 'var(--text-sm)'
-                    }}>
-                        Supported formats: MP4, MKV, AVI, MOV
-                    </p>
-                )}
+            <div className="drop-zone-stats">
+                <div className="card drop-zone-stat">
+                    <div className="drop-zone-stat-icon">
+                        <FileVideo style={{ color: 'var(--gold-primary)' }} />
+                    </div>
+                    <div className="drop-zone-stat-info">
+                        <div className="drop-zone-stat-value">{fileCount}</div>
+                        <div className="drop-zone-stat-label">Pending Review</div>
+                    </div>
+                </div>
+
+                <div className="card drop-zone-stat">
+                    <div className="drop-zone-stat-icon">
+                        <HardDrive style={{ color: 'var(--info)' }} />
+                    </div>
+                    <div className="drop-zone-stat-info">
+                        <div className="drop-zone-stat-value">
+                            0 <span>GB</span>
+                        </div>
+                        <div className="drop-zone-stat-label">Total Size</div>
+                    </div>
+                </div>
+
+                <div className="card drop-zone-stat">
+                    <div className="drop-zone-stat-icon">
+                        <AlertCircle style={{ color: 'var(--warning)' }} />
+                    </div>
+                    <div className="drop-zone-stat-info">
+                        <div className="drop-zone-stat-value">0</div>
+                        <div className="drop-zone-stat-label">Issues Found</div>
+                    </div>
+                </div>
             </div>
         </div>
     );
