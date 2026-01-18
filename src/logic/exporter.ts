@@ -1,4 +1,3 @@
-import path from 'path';
 import { ParseResult } from '../types/index.js';
 
 /**
@@ -20,7 +19,7 @@ export function generateNewPath(metadata: ParseResult | null): string | null {
         // but Typescript might complain if they are optional in interface.
         const s = formattedSeason || '00';
         const e = formattedEpisode || '00';
-        
+
         const seasonFolder = `Season ${s}`;
         const newFileName = `${series} - S${s}E${e}${ext}`;
         relativePath = `${series}/${seasonFolder}/${newFileName}`;
