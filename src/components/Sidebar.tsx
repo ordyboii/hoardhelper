@@ -77,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     aria-label="Open settings"
                 >
                     <Settings size={18} aria-hidden="true" />
-                    <span>Settings</span>
+                    <span>Map configuration</span>
                 </button>
 
                 {/* System Status Card */}

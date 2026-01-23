@@ -11,8 +11,8 @@ export function generateNewPath(metadata: ParseResult | null): string | null {
     let relativePath = "";
 
     if (type === 'movie') {
-        // Structure: [Movie Name]/[Movie Name].[extension]
-        relativePath = `${series}/${series}${ext}`;
+        // Structure: [Movie Name].[extension]
+        relativePath = `${series}${ext}`;
     } else {
         // Structure: [Series Name]/Season [XX]/[Series Name] - S[XX]E[XX].[extension]
         // formattedSeason and formattedEpisode are guaranteed for TV type by the parser logic,
