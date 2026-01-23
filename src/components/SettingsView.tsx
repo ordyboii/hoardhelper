@@ -18,8 +18,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const [settings, setSettings] = useState<Settings>(initialSettings);
     const [isTesting, setIsTesting] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
-    const [isTestingRealDebrid, setIsTestingRealDebrid] = useState(false);
-    const [realDebridStatus, setRealDebridStatus] = useState<RealDebridConnectionResult | null>(null);
 
     useEffect(() => {
         setSettings(initialSettings);
@@ -34,28 +32,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const handleTest = async () => {
         setIsTesting(true);
         try {
-            const result = await onTestConnection(settings);
-            alert(result.success ? "Connection Established!" : `Connection Failed: ${result.error || 'Unknown error'}`);
+            // Test Nextcloud connection
+            const nextcloudResult = await onTestConnection(settings);
+
+            // Test Real-Debrid connection if API key is provided
+            let realDebridResult: RealDebridConnectionResult | null = null;
+            if (settings.realDebridApiKey) {
+                realDebridResult = await onTestRealDebrid(settings.realDebridApiKey);
+            }
+
+            // Build alert message with both results
+            const messages: string[] = [];
+
+            // Nextcloud status
+            if (nextcloudResult.success) {
+                messages.push('Nextcloud: Connected');
+            } else {
+                messages.push(`Nextcloud: Failed - ${nextcloudResult.error || 'Unknown error'}`);
+            }
+
+            // Real-Debrid status
+            if (settings.realDebridApiKey) {
+                if (realDebridResult?.success) {
+                    let rdMessage = `Real-Debrid: Connected as ${realDebridResult.username}`;
+                    if (realDebridResult.expiration) {
+                        rdMessage += ` (expires: ${realDebridResult.expiration})`;
+                    }
+                    messages.push(rdMessage);
+                } else {
+                    messages.push(`Real-Debrid: Failed - ${realDebridResult?.error || 'Unknown error'}`);
+                }
+            } else {
+                messages.push('Real-Debrid: Not configured');
+            }
+
+            alert(messages.join('\n\n'));
         } finally {
             setIsTesting(false);
-        }
-    };
-
-    const handleTestRealDebrid = async () => {
-        if (!settings.realDebridApiKey) {
-            alert('Please enter an API token first.');
-            return;
-        }
-        setIsTestingRealDebrid(true);
-        setRealDebridStatus(null);
-        try {
-            const result = await onTestRealDebrid(settings.realDebridApiKey);
-            setRealDebridStatus(result);
-            if (!result.success) {
-                alert(`Connection Failed: ${result.error || 'Unknown error'}`);
-            }
-        } finally {
-            setIsTestingRealDebrid(false);
         }
     };
 
@@ -198,28 +211,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <ExternalLink size={12} />
                                 Get your API token from Real-Debrid
                             </a>
-                        </div>
-
-                        <div className="form-group">
-                            <button
-                                className="btn-secondary"
-                                onClick={handleTestRealDebrid}
-                                disabled={isTestingRealDebrid || !settings.realDebridApiKey}
-                                aria-label="Test Real-Debrid connection"
-                            >
-                                <Zap size={18} aria-hidden="true" />
-                                {isTestingRealDebrid ? 'Testing...' : 'Test Connection'}
-                            </button>
-                            {realDebridStatus && realDebridStatus.success && (
-                                <div className="settings-success">
-                                    <span>Connected as {realDebridStatus.username}</span>
-                                    {realDebridStatus.expiration && (
-                                        <span className="settings-hint">
-                                            Premium expires: {realDebridStatus.expiration}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
