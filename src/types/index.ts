@@ -48,6 +48,8 @@ export interface Settings {
     password: string;
     // Real-Debrid settings
     realDebridApiKey?: string;
+    // Connection monitoring
+    connectionCheckInterval?: number; // in seconds, default 60
 }
 
 export interface RealDebridConnectionResult {

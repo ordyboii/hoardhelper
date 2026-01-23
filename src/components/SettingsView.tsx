@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Server, Folder, Link, User, Key, Zap, ExternalLink } from 'lucide-react';
+import { Save, Server, Folder, Link, User, Key, Zap, ExternalLink, Clock } from 'lucide-react';
 import { Settings, ExportResult, RealDebridConnectionResult } from '../types';
 
 interface SettingsViewProps {
@@ -211,6 +211,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <ExternalLink size={12} />
                                 Get your API token from Real-Debrid
                             </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="card settings-section">
+                    <div className="settings-section-header">
+                        <div className="settings-section-icon">
+                            <Clock />
+                        </div>
+                        <h3 className="settings-section-title">Connection Monitoring</h3>
+                    </div>
+
+                    <div className="settings-fields">
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="connectionCheckInterval">
+                                <Clock size={14} />
+                                Connection Check Interval (seconds)
+                            </label>
+                            <input
+                                id="connectionCheckInterval"
+                                className="input-field"
+                                type="number"
+                                min={30}
+                                max={300}
+                                value={settings.connectionCheckInterval ?? 60}
+                                onChange={(e) => setSettings({ ...settings, connectionCheckInterval: Math.max(30, Math.min(300, parseInt(e.target.value) || 60)) })}
+                            />
+                            <p className="settings-hint">
+                                How often to check connection status (30-300 seconds). Checks pause when app is minimized.
+                            </p>
                         </div>
                     </div>
                 </div>

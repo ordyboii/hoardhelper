@@ -20,10 +20,11 @@ const App: React.FC = () => {
     const [isExporting, setIsExporting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
     const [settings, setSettings] = useState<Settings>({
-        url: '', targetFolderTv: '', targetFolderMovie: '', username: '', password: '', realDebridApiKey: ''
+        url: '', targetFolderTv: '', targetFolderMovie: '', username: '', password: '', realDebridApiKey: '', connectionCheckInterval: 60
     });
     const [nextcloudConnected, setNextcloudConnected] = useState(false);
     const [realDebridConnected, setRealDebridConnected] = useState(false);
+    const [isAppVisible, setIsAppVisible] = useState(true);
 
     // Initial Load
     useEffect(() => {
@@ -78,6 +79,53 @@ const App: React.FC = () => {
             });
         });
     }, []);
+
+    // Visibility change listener
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            setIsAppVisible(document.visibilityState === 'visible');
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, []);
+
+    // Periodic connection status checks
+    useEffect(() => {
+        const checkInterval = (settings.connectionCheckInterval ?? 60) * 1000;
+
+        const checkConnections = async () => {
+            if (!isAppVisible) return;
+
+            // Check Nextcloud connection
+            if (settings.url && settings.username && settings.password) {
+                try {
+                    const result = await window.api.testConnection();
+                    setNextcloudConnected(result.success);
+                } catch {
+                    setNextcloudConnected(false);
+                }
+            }
+
+            // Check Real-Debrid connection
+            if (settings.realDebridApiKey) {
+                try {
+                    const result = await window.api.testRealDebridConnection(settings.realDebridApiKey);
+                    setRealDebridConnected(result.success);
+                } catch {
+                    setRealDebridConnected(false);
+                }
+            }
+        };
+
+        const intervalId = setInterval(checkConnections, checkInterval);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [settings.connectionCheckInterval, settings.url, settings.username, settings.password, settings.realDebridApiKey, isAppVisible]);
 
     const handleFilesDropped = async (droppedFiles: File[]) => {
         const paths = droppedFiles.map(f => window.api.getFilePath(f));
