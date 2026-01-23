@@ -46,6 +46,15 @@ export interface Settings {
     targetFolderMovie: string;
     username: string;
     password: string;
+    // Real-Debrid settings
+    realDebridApiKey?: string;
+}
+
+export interface RealDebridConnectionResult {
+    success: boolean;
+    expiration?: string;
+    username?: string;
+    error?: string;
 }
 
 export interface UploadProgress {
@@ -66,6 +75,7 @@ export interface ElectronAPI {
     getSettings: () => Promise<Settings>;
     saveSettings: (settings: Settings) => Promise<boolean>;
     testConnection: (settings?: Settings) => Promise<ExportResult>;
+    testRealDebridConnection: (apiKey?: string) => Promise<RealDebridConnectionResult>;
     generatePath: (metadata: FileMetadata) => Promise<string | null>;
     onUploadProgress: (callback: (data: UploadProgress) => void) => void;
     log: (msg: string) => void;

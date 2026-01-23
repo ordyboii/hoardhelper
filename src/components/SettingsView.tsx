@@ -1,21 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Server, Folder, Link, User, Key } from 'lucide-react';
-import { Settings, ExportResult } from '../types';
+import { Save, Server, Folder, Link, User, Key, Zap, ExternalLink } from 'lucide-react';
+import { Settings, ExportResult, RealDebridConnectionResult } from '../types';
 
 interface SettingsViewProps {
     initialSettings: Settings;
     onSave: (settings: Settings) => void;
     onTestConnection: (settings: Settings) => Promise<ExportResult>;
+    onTestRealDebrid: (apiKey: string) => Promise<RealDebridConnectionResult>;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
     initialSettings,
     onSave,
-    onTestConnection
+    onTestConnection,
+    onTestRealDebrid
 }) => {
     const [settings, setSettings] = useState<Settings>(initialSettings);
     const [isTesting, setIsTesting] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
+    const [isTestingRealDebrid, setIsTestingRealDebrid] = useState(false);
+    const [realDebridStatus, setRealDebridStatus] = useState<RealDebridConnectionResult | null>(null);
 
     useEffect(() => {
         setSettings(initialSettings);
@@ -34,6 +38,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             alert(result.success ? "Connection Established!" : `Connection Failed: ${result.error || 'Unknown error'}`);
         } finally {
             setIsTesting(false);
+        }
+    };
+
+    const handleTestRealDebrid = async () => {
+        if (!settings.realDebridApiKey) {
+            alert('Please enter an API token first.');
+            return;
+        }
+        setIsTestingRealDebrid(true);
+        setRealDebridStatus(null);
+        try {
+            const result = await onTestRealDebrid(settings.realDebridApiKey);
+            setRealDebridStatus(result);
+            if (!result.success) {
+                alert(`Connection Failed: ${result.error || 'Unknown error'}`);
+            }
+        } finally {
+            setIsTestingRealDebrid(false);
         }
     };
 
@@ -141,6 +163,63 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             <p className="settings-hint">
                                 Files will be organized into subfolders automatically based on type.
                             </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="card settings-section">
+                    <div className="settings-section-header">
+                        <div className="settings-section-icon">
+                            <Zap />
+                        </div>
+                        <h3 className="settings-section-title">Real-Debrid Configuration</h3>
+                    </div>
+
+                    <div className="settings-fields">
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="realDebridApiKey">
+                                <Key size={14} />
+                                API Token
+                            </label>
+                            <input
+                                id="realDebridApiKey"
+                                className="input-field"
+                                type="password"
+                                value={settings.realDebridApiKey || ''}
+                                onChange={(e) => setSettings({ ...settings, realDebridApiKey: e.target.value })}
+                                placeholder="••••••••••••••••"
+                            />
+                            <a
+                                href="https://real-debrid.com/apitoken"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="settings-link"
+                            >
+                                <ExternalLink size={12} />
+                                Get your API token from Real-Debrid
+                            </a>
+                        </div>
+
+                        <div className="form-group">
+                            <button
+                                className="btn-secondary"
+                                onClick={handleTestRealDebrid}
+                                disabled={isTestingRealDebrid || !settings.realDebridApiKey}
+                                aria-label="Test Real-Debrid connection"
+                            >
+                                <Zap size={18} aria-hidden="true" />
+                                {isTestingRealDebrid ? 'Testing...' : 'Test Connection'}
+                            </button>
+                            {realDebridStatus && realDebridStatus.success && (
+                                <div className="settings-success">
+                                    <span>Connected as {realDebridStatus.username}</span>
+                                    {realDebridStatus.expiration && (
+                                        <span className="settings-hint">
+                                            Premium expires: {realDebridStatus.expiration}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

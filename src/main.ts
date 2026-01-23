@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { parseFilename } from './logic/parser.js';
 import { generateNewPath } from './logic/exporter.js';
 import { initializeClient, testConnection, uploadFileToNextcloud } from './logic/nextcloud.js';
+import { initializeRealDebrid, testRealDebridConnection } from './logic/realdebrid.js';
 import type { Settings, FileMetadata, ExportResult } from './types/index.js';
 
 // Workaround for __dirname in ESM
@@ -42,6 +43,10 @@ app.whenReady().then(() => {
     const settings = store.get('nextcloud') as Settings | undefined;
     if (settings) {
         initializeClient(settings.url, settings.username, settings.password);
+        // Initialize Real-Debrid if API key exists
+        if (settings.realDebridApiKey) {
+            initializeRealDebrid(settings.realDebridApiKey);
+        }
     }
 
     app.on('activate', () => {
@@ -72,6 +77,10 @@ ipcMain.handle('get-settings', () => {
 ipcMain.handle('save-settings', (event, settings: Settings) => {
     store.set('nextcloud', settings);
     const success = initializeClient(settings.url, settings.username, settings.password);
+    // Initialize Real-Debrid if API key is present
+    if (settings.realDebridApiKey) {
+        initializeRealDebrid(settings.realDebridApiKey);
+    }
     return success;
 });
 
@@ -86,6 +95,10 @@ ipcMain.handle('test-connection', async (event, settings?: Settings) => {
     } catch (err: any) {
         return { success: false, error: err.message };
     }
+});
+
+ipcMain.handle('test-realdebrid-connection', async (event, apiKey?: string) => {
+    return await testRealDebridConnection(apiKey);
 });
 
 // 1. Parse Files

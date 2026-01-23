@@ -8,6 +8,8 @@ interface SidebarProps {
     itemCount: number;
     isOpen: boolean;
     onClose: () => void;
+    nextcloudConnected?: boolean;
+    realDebridConnected?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -15,7 +17,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onChangeView,
     itemCount,
     isOpen,
-    onClose
+    onClose,
+    nextcloudConnected = false,
+    realDebridConnected = false
 }) => {
     const navItems = [
         { id: ViewState.Loot, label: 'Loot', icon: Box, description: 'Inventory' },
@@ -85,7 +89,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <p className="system-status-title">System Status</p>
                     <div className="system-status-row">
                         <span className="system-status-label">Nextcloud</span>
-                        <span className="system-status-value success">Connected</span>
+                        <span
+                            className={`system-status-value ${nextcloudConnected ? 'success' : 'warning'}`}
+                            aria-label={nextcloudConnected ? 'Nextcloud connected' : 'Nextcloud not configured'}
+                        >
+                            {nextcloudConnected ? 'Connected' : 'Not Configured'}
+                        </span>
+                    </div>
+                    <div className="system-status-row">
+                        <span className="system-status-label">Real-Debrid</span>
+                        <span
+                            className={`system-status-value ${realDebridConnected ? 'success' : 'warning'}`}
+                            aria-label={realDebridConnected ? 'Real-Debrid connected' : 'Real-Debrid not configured'}
+                        >
+                            {realDebridConnected ? 'Connected' : 'Not Configured'}
+                        </span>
                     </div>
                 </div>
             </div>

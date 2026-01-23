@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('api', {
     saveSettings: (settings: Settings) => ipcRenderer.invoke('save-settings', settings),
     testConnection: (settings?: Settings) => ipcRenderer.invoke('test-connection', settings),
 
+    // Real-Debrid
+    testRealDebridConnection: (apiKey?: string) => ipcRenderer.invoke('test-realdebrid-connection', apiKey),
+
     // Helper to generate path for edit mode
     generatePath: (metadata: FileMetadata) => ipcRenderer.invoke('generate-path', metadata),
 

@@ -20,18 +20,41 @@ const App: React.FC = () => {
     const [isExporting, setIsExporting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
     const [settings, setSettings] = useState<Settings>({
-        url: '', targetFolderTv: '', targetFolderMovie: '', username: '', password: ''
+        url: '', targetFolderTv: '', targetFolderMovie: '', username: '', password: '', realDebridApiKey: ''
     });
+    const [nextcloudConnected, setNextcloudConnected] = useState(false);
+    const [realDebridConnected, setRealDebridConnected] = useState(false);
 
     // Initial Load
     useEffect(() => {
         const loadSettings = async () => {
             const s = await window.api.getSettings();
-            setSettings({
+            const loadedSettings = {
                 ...s,
                 targetFolderTv: s.targetFolderTv || s.targetFolder || '',
                 targetFolderMovie: s.targetFolderMovie || s.targetFolder || ''
-            });
+            };
+            setSettings(loadedSettings);
+
+            // Check Nextcloud connection status
+            if (loadedSettings.url && loadedSettings.username && loadedSettings.password) {
+                try {
+                    const result = await window.api.testConnection();
+                    setNextcloudConnected(result.success);
+                } catch {
+                    setNextcloudConnected(false);
+                }
+            }
+
+            // Check Real-Debrid connection status
+            if (loadedSettings.realDebridApiKey) {
+                try {
+                    const result = await window.api.testRealDebridConnection(loadedSettings.realDebridApiKey);
+                    setRealDebridConnected(result.success);
+                } catch {
+                    setRealDebridConnected(false);
+                }
+            }
         };
         loadSettings();
 
@@ -179,10 +202,32 @@ const App: React.FC = () => {
         const success = await window.api.saveSettings(newSettings);
         if (success) {
             setSettings(newSettings);
+            setNextcloudConnected(true);
             alert("Map updated.");
         } else {
+            setNextcloudConnected(false);
             alert("Map saved but client init failed.");
         }
+
+        // Update Real-Debrid status
+        if (newSettings.realDebridApiKey) {
+            try {
+                const rdResult = await window.api.testRealDebridConnection(newSettings.realDebridApiKey);
+                setRealDebridConnected(rdResult.success);
+            } catch {
+                setRealDebridConnected(false);
+            }
+        } else {
+            setRealDebridConnected(false);
+        }
+    };
+
+    const handleTestRealDebrid = async (apiKey: string) => {
+        const result = await window.api.testRealDebridConnection(apiKey);
+        if (result.success) {
+            setRealDebridConnected(true);
+        }
+        return result;
     };
 
     const validCount = files.filter(f => f.valid).length;
@@ -233,6 +278,7 @@ const App: React.FC = () => {
                         initialSettings={settings}
                         onSave={handleSaveSettings}
                         onTestConnection={window.api.testConnection}
+                        onTestRealDebrid={handleTestRealDebrid}
                     />
                 );
             default:
@@ -261,6 +307,8 @@ const App: React.FC = () => {
                 itemCount={validCount}
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
+                nextcloudConnected={nextcloudConnected}
+                realDebridConnected={realDebridConnected}
             />
 
             <div className="main-content">
