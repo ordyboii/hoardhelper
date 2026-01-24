@@ -71,6 +71,36 @@ Design tokens are in `src/index.css` and documented in `docs/styleguide.md`:
 - Dark theme with high contrast text
 - Font families: Cinzel (display), Inter (body), JetBrains Mono (code)
 
+## Coding Patterns
+
+See `docs/styleguide.md` for detailed coding patterns and examples.
+
+### Control Flow
+- **Maximum nesting:** 1-2 levels (avoid deep nesting)
+- **Prefer guard clauses:** Handle edge cases early with early returns
+- **Happy path last:** Main logic should be at the end with minimal indentation
+- **Extract helpers:** Move duplicated or complex nested logic to well-named functions
+- **Type narrowing:** Use explicit null checks (`if (!obj)`) instead of optional chaining (`obj?.prop`) for proper TypeScript type narrowing
+- **Validation extraction:** Move complex inline validation (especially in JSX) to named handler functions
+
+### Examples
+```typescript
+// ❌ Avoid: Deep nesting
+if (condition1) {
+    if (condition2) {
+        if (condition3) {
+            // happy path buried
+        }
+    }
+}
+
+// ✅ Prefer: Guard clauses
+if (!condition1) return;
+if (!condition2) return;
+if (!condition3) return;
+// happy path at top level
+```
+
 ## Security Considerations
 
 The parser and exporter modules are security-critical:

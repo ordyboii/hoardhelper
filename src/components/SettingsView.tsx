@@ -56,22 +56,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 messages.push(`Nextcloud: Failed - ${nextcloudResult.error || 'Unknown error'}`);
             }
 
-            // Real-Debrid status
-            if (settings.realDebridApiKey) {
-                // Explicit null check for proper type narrowing
-                if (realDebridResult && realDebridResult.success) {
-                    let rdMessage = `Real-Debrid: Connected as ${realDebridResult.username}`;
-                    if (realDebridResult.expiration) {
-                        rdMessage += ` (expires: ${realDebridResult.expiration})`;
-                    }
-                    messages.push(rdMessage);
-                } else {
-                    // realDebridResult could be null or have success=false
-                    const errorMsg = realDebridResult?.error || 'Unknown error';
-                    messages.push(`Real-Debrid: Failed - ${errorMsg}`);
-                }
-            } else {
+            // Real-Debrid status - using guard clauses to reduce nesting
+            if (!settings.realDebridApiKey) {
                 messages.push('Real-Debrid: Not configured');
+            } else if (!realDebridResult || !realDebridResult.success) {
+                // Handle null or failed connection
+                const errorMsg = realDebridResult?.error || 'Unknown error';
+                messages.push(`Real-Debrid: Failed - ${errorMsg}`);
+            } else {
+                // realDebridResult is guaranteed non-null and successful here
+                let rdMessage = `Real-Debrid: Connected as ${realDebridResult.username}`;
+                if (realDebridResult.expiration) {
+                    rdMessage += ` (expires: ${realDebridResult.expiration})`;
+                }
+                messages.push(rdMessage);
             }
 
             alert(messages.join('\n\n'));

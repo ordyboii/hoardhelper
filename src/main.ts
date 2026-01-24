@@ -7,7 +7,7 @@ import { generateNewPath } from './logic/exporter.js';
 import { initializeClient, testConnection, uploadFileToNextcloud } from './logic/nextcloud.js';
 import { initializeRealDebrid, testRealDebridConnection } from './logic/realdebrid.js';
 import { encryptString, decryptString, isEncryptionAvailable } from './logic/secureStorage.js';
-import type { Settings, StoredSettings, FileMetadata, ExportResult } from './types/index.js';
+import type { Settings, StoredSettings, FileMetadata, ParseResult, ExportResult } from './types/index.js';
 
 // Workaround for __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +49,45 @@ function encryptSettings(settings: Settings): StoredSettings {
 }
 
 /**
+ * Prepends the appropriate target folder base path to a proposed file path.
+ * Uses guard clauses to avoid nested conditionals.
+ *
+ * @param metadata - Parse result containing type (tv/movie)
+ * @param proposedPath - The generated path without base folder
+ * @param settings - User settings containing target folders
+ * @returns The full path with base folder prepended, or the original proposedPath if no base is set
+ */
+function prependTargetBasePath(
+    metadata: ParseResult,
+    proposedPath: string | null,
+    settings: Settings | undefined
+): string | null {
+    // Guard: No proposed path to modify
+    if (!proposedPath) {
+        return proposedPath;
+    }
+
+    // Determine target base folder based on media type
+    const targetBase = metadata.type === 'tv'
+        ? settings?.targetFolderTv || settings?.targetFolder || ''
+        : settings?.targetFolderMovie || settings?.targetFolder || '';
+
+    // Guard: No target base configured
+    if (!targetBase) {
+        return proposedPath;
+    }
+
+    // Security: Sanitize base path to prevent traversal
+    const safeBase = targetBase.replace(/\.\./g, '');
+
+    // Ensure no double slashes
+    const base = safeBase.replace(/\/$/, '');
+    const rel = proposedPath.replace(/^\//, '');
+
+    return `${base}/${rel}`;
+}
+
+/**
  * Converts StoredSettings to plain Settings by decrypting sensitive fields.
  * Handles migration from old unencrypted format.
  */
@@ -62,30 +101,30 @@ function decryptSettings(stored: StoredSettings): Settings {
         connectionCheckInterval: stored.connectionCheckInterval
     };
 
-    // Migration: If old unencrypted data exists, use it and re-encrypt on next save
-    if (!stored._encrypted) {
-        console.log('[SecureStorage] Migrating from unencrypted storage format');
-        // Cast to any to access old plain-text fields
-        const legacy = stored as any;
-        settings.password = legacy.password || '';
-        settings.realDebridApiKey = legacy.realDebridApiKey;
-    } else {
-        // Decrypt password
-        if (stored.password_encrypted) {
-            const decrypted = decryptString(stored.password_encrypted);
-            settings.password = decrypted || '';
-        }
-
-        // Decrypt Real-Debrid API key
-        if (stored.realDebridApiKey_encrypted) {
-            const decrypted = decryptString(stored.realDebridApiKey_encrypted);
-            settings.realDebridApiKey = decrypted || undefined;
-        }
-    }
-
     // Keep deprecated field if it exists
     if (stored.targetFolder) {
         settings.targetFolder = stored.targetFolder;
+    }
+
+    // Migration: If old unencrypted data exists, use it and return early
+    if (!stored._encrypted) {
+        console.log('[SecureStorage] Migrating from unencrypted storage format');
+        const legacy = stored as any;
+        settings.password = legacy.password || '';
+        settings.realDebridApiKey = legacy.realDebridApiKey;
+        return settings;
+    }
+
+    // Decrypt password if present
+    if (stored.password_encrypted) {
+        const decrypted = decryptString(stored.password_encrypted);
+        settings.password = decrypted || '';
+    }
+
+    // Decrypt Real-Debrid API key if present
+    if (stored.realDebridApiKey_encrypted) {
+        const decrypted = decryptString(stored.realDebridApiKey_encrypted);
+        settings.realDebridApiKey = decrypted || undefined;
     }
 
     return settings;
@@ -213,27 +252,8 @@ ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
         try {
             const metadata = parseFilename(filePath);
             if (metadata) {
-                let proposedPath = generateNewPath(metadata);
-
-                // Prepend the remote base folder if set
-                if (proposedPath) {
-                    let targetBase = '';
-                    if (metadata.type === 'tv') {
-                        targetBase = settings?.targetFolderTv || settings?.targetFolder || '';
-                    } else {
-                        targetBase = settings?.targetFolderMovie || settings?.targetFolder || '';
-                    }
-
-                    if (targetBase) {
-                        // Security: Sanitize base path to prevent traversal
-                        const safeBase = targetBase.replace(/\.\./g, '');
-
-                        // Ensure no double slashes
-                        const base = safeBase.replace(/\/$/, '');
-                        const rel = proposedPath.replace(/^\//, '');
-                        proposedPath = `${base}/${rel}`;
-                    }
-                }
+                const basePath = generateNewPath(metadata);
+                const proposedPath = prependTargetBasePath(metadata, basePath, settings);
 
                 results.push({
                     ...metadata,
@@ -273,27 +293,8 @@ ipcMain.handle('generate-path', (event, metadata: FileMetadata) => {
     const stored = store.get('nextcloud') as StoredSettings | undefined;
     const settings = stored ? decryptSettings(stored) : undefined;
 
-    let proposedPath = generateNewPath(metadata);
-
-    // Prepend the remote base folder if set
-    if (proposedPath) {
-        let targetBase = '';
-        if (metadata.type === 'tv') {
-            targetBase = settings?.targetFolderTv || settings?.targetFolder || '';
-        } else {
-            targetBase = settings?.targetFolderMovie || settings?.targetFolder || '';
-        }
-
-        if (targetBase) {
-            // Security: Sanitize base path to prevent traversal
-            const safeBase = targetBase.replace(/\.\./g, '');
-
-            const base = safeBase.replace(/\/$/, '');
-            const rel = proposedPath.replace(/^\//, '');
-            proposedPath = `${base}/${rel}`;
-        }
-    }
-    return proposedPath;
+    const basePath = generateNewPath(metadata);
+    return prependTargetBasePath(metadata, basePath, settings);
 });
 
 // 3. Export/Upload Files
