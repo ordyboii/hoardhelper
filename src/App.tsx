@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { DropZone } from './components/DropZone';
 import { QueueList } from './components/QueueList';
@@ -26,6 +26,38 @@ const App: React.FC = () => {
     const [realDebridConnected, setRealDebridConnected] = useState(false);
     const [isAppVisible, setIsAppVisible] = useState(true);
 
+    /**
+     * Checks connection status for both Nextcloud and Real-Debrid services.
+     * Updates connection state based on test results.
+     */
+    const checkConnectionStatus = useCallback(async (settingsToCheck: Settings) => {
+        // Check Nextcloud connection
+        if (settingsToCheck.url && settingsToCheck.username && settingsToCheck.password) {
+            try {
+                const result = await window.api.testConnection();
+                setNextcloudConnected(result.success);
+            } catch (error) {
+                console.error('[App] Nextcloud connection check failed:', error);
+                setNextcloudConnected(false);
+            }
+        } else {
+            setNextcloudConnected(false);
+        }
+
+        // Check Real-Debrid connection
+        if (settingsToCheck.realDebridApiKey) {
+            try {
+                const result = await window.api.testRealDebridConnection(settingsToCheck.realDebridApiKey);
+                setRealDebridConnected(result.success);
+            } catch (error) {
+                console.error('[App] Real-Debrid connection check failed:', error);
+                setRealDebridConnected(false);
+            }
+        } else {
+            setRealDebridConnected(false);
+        }
+    }, []);
+
     // Initial Load
     useEffect(() => {
         const loadSettings = async () => {
@@ -37,25 +69,8 @@ const App: React.FC = () => {
             };
             setSettings(loadedSettings);
 
-            // Check Nextcloud connection status
-            if (loadedSettings.url && loadedSettings.username && loadedSettings.password) {
-                try {
-                    const result = await window.api.testConnection();
-                    setNextcloudConnected(result.success);
-                } catch {
-                    setNextcloudConnected(false);
-                }
-            }
-
-            // Check Real-Debrid connection status
-            if (loadedSettings.realDebridApiKey) {
-                try {
-                    const result = await window.api.testRealDebridConnection(loadedSettings.realDebridApiKey);
-                    setRealDebridConnected(result.success);
-                } catch {
-                    setRealDebridConnected(false);
-                }
-            }
+            // Check connection status for both services
+            await checkConnectionStatus(loadedSettings);
         };
         loadSettings();
 
@@ -78,7 +93,7 @@ const App: React.FC = () => {
                 return newFiles;
             });
         });
-    }, []);
+    }, [checkConnectionStatus]);
 
     // Visibility change listener
     useEffect(() => {
@@ -98,26 +113,7 @@ const App: React.FC = () => {
 
         const checkConnections = async () => {
             if (!isAppVisible) return;
-
-            // Check Nextcloud connection
-            if (settings.url && settings.username && settings.password) {
-                try {
-                    const result = await window.api.testConnection();
-                    setNextcloudConnected(result.success);
-                } catch {
-                    setNextcloudConnected(false);
-                }
-            }
-
-            // Check Real-Debrid connection
-            if (settings.realDebridApiKey) {
-                try {
-                    const result = await window.api.testRealDebridConnection(settings.realDebridApiKey);
-                    setRealDebridConnected(result.success);
-                } catch {
-                    setRealDebridConnected(false);
-                }
-            }
+            await checkConnectionStatus(settings);
         };
 
         const intervalId = setInterval(checkConnections, checkInterval);
@@ -125,7 +121,7 @@ const App: React.FC = () => {
         return () => {
             clearInterval(intervalId);
         };
-    }, [settings.connectionCheckInterval, settings.url, settings.username, settings.password, settings.realDebridApiKey, isAppVisible]);
+    }, [settings, isAppVisible, checkConnectionStatus]);
 
     const handleFilesDropped = async (droppedFiles: File[]) => {
         const paths = droppedFiles.map(f => window.api.getFilePath(f));
@@ -250,24 +246,13 @@ const App: React.FC = () => {
         const success = await window.api.saveSettings(newSettings);
         if (success) {
             setSettings(newSettings);
-            setNextcloudConnected(true);
             alert("Map updated.");
         } else {
-            setNextcloudConnected(false);
             alert("Map saved but client init failed.");
         }
 
-        // Update Real-Debrid status
-        if (newSettings.realDebridApiKey) {
-            try {
-                const rdResult = await window.api.testRealDebridConnection(newSettings.realDebridApiKey);
-                setRealDebridConnected(rdResult.success);
-            } catch {
-                setRealDebridConnected(false);
-            }
-        } else {
-            setRealDebridConnected(false);
-        }
+        // Check connection status for both services
+        await checkConnectionStatus(newSettings);
     };
 
     const handleTestRealDebrid = async (apiKey: string) => {
