@@ -1,6 +1,30 @@
+import { z } from 'zod';
 import { RealDebridConnectionResult } from '../types/index.js';
 
 const REALDEBRID_API_BASE = 'https://api.real-debrid.com/rest/1.0';
+
+/**
+ * Zod schema for Real-Debrid /user API response
+ *
+ * Validates all required fields and optional expiration date.
+ * Based on Real-Debrid API documentation.
+ */
+const RealDebridUserResponseSchema = z.object({
+    id: z.number().int().positive(),
+    username: z.string().min(1),
+    email: z.string().email(),
+    points: z.number().int().nonnegative(),
+    locale: z.string().min(2).max(5), // e.g., "en", "en-US"
+    avatar: z.string().url(),
+    type: z.string().min(1), // e.g., "premium", "free"
+    premium: z.number().int().nonnegative(),
+    expiration: z.string().datetime().optional() // ISO 8601 datetime string
+});
+
+/**
+ * TypeScript type inferred from Zod schema
+ */
+type RealDebridUserResponse = z.infer<typeof RealDebridUserResponseSchema>;
 
 /**
  * RealDebridClient encapsulates the API key and provides methods for Real-Debrid API interactions.
@@ -41,22 +65,41 @@ class RealDebridClient {
                 return { success: false, error: `API error: ${response.status} ${response.statusText}` };
             }
 
-            const userData = await response.json();
+            const rawData = await response.json();
 
-            // Validate response structure
-            if (!userData || typeof userData !== 'object') {
-                return { success: false, error: 'Invalid API response' };
+            // Validate response structure with Zod
+            const parseResult = RealDebridUserResponseSchema.safeParse(rawData);
+
+            if (!parseResult.success) {
+                console.error('[RealDebrid] Invalid API response structure:', {
+                    data: rawData,
+                    errors: parseResult.error.issues
+                });
+                return {
+                    success: false,
+                    error: `Invalid API response: ${parseResult.error.issues[0]?.message || 'Unknown validation error'}`
+                };
             }
 
-            // Format expiration date
+            const userData = parseResult.data;
+
+            // Format expiration date if present
             let expirationDisplay: string | undefined;
             if (userData.expiration) {
-                const expDate = new Date(userData.expiration);
-                expirationDisplay = expDate.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
+                try {
+                    const expDate = new Date(userData.expiration);
+                    // Validate that the date is valid (Zod validates ISO format, but we still check)
+                    if (!isNaN(expDate.getTime())) {
+                        expirationDisplay = expDate.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                    }
+                } catch (dateError) {
+                    console.warn('[RealDebrid] Failed to parse expiration date:', userData.expiration);
+                    // Continue without expiration display
+                }
             }
 
             return {

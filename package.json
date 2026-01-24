@@ -44,7 +44,8 @@
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "webdav": "^5.8.0"
+    "webdav": "^5.8.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.0.8",
@@ -53,7 +54,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "concurrently": "^9.2.1",
     "electron": "^39.2.7",
-    "electron-builder": "^26.4.0",
+    "electron-builder": "^23.0.6",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
