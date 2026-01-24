@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Film, Tv } from 'lucide-react';
-import { FileMetadata } from '../types';
+import React, { useState, useEffect } from "react";
+import { ArrowLeft, Save, Film, Tv } from "lucide-react";
+import { FileMetadata } from "../types";
 
 interface EditViewProps {
     file: FileMetadata;
@@ -9,38 +9,38 @@ interface EditViewProps {
 }
 
 export const EditView: React.FC<EditViewProps> = ({ file, onSave, onCancel }) => {
-    const [type, setType] = useState<'tv' | 'movie'>(file.type || 'tv');
-    const [series, setSeries] = useState(file.series || '');
+    const [type, setType] = useState<"tv" | "movie">(file.type || "tv");
+    const [series, setSeries] = useState(file.series || "");
     const [season, setSeason] = useState<number | string>(file.season || 1);
     const [episode, setEpisode] = useState<number | string>(file.episode || 1);
 
     useEffect(() => {
-        setType(file.type || 'tv');
-        setSeries(file.series || '');
+        setType(file.type || "tv");
+        setSeries(file.series || "");
         setSeason(file.season || 1);
         setEpisode(file.episode || 1);
     }, [file]);
 
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
+            if (e.key === "Escape") {
                 onCancel();
             }
         };
-        window.addEventListener('keydown', handleEscape);
-        return () => window.removeEventListener('keydown', handleEscape);
+        window.addEventListener("keydown", handleEscape);
+        return () => window.removeEventListener("keydown", handleEscape);
     }, [onCancel]);
 
     const handleSave = () => {
-        const numSeason = typeof season === 'string' ? parseInt(season) : season;
-        const numEpisode = typeof episode === 'string' ? parseInt(episode) : episode;
+        const numSeason = typeof season === "string" ? parseInt(season) : season;
+        const numEpisode = typeof episode === "string" ? parseInt(episode) : episode;
 
         const updated: FileMetadata = {
             ...file,
             type,
             series,
-            season: type === 'tv' ? numSeason : null,
-            episode: type === 'tv' ? numEpisode : null,
+            season: type === "tv" ? numSeason : null,
+            episode: type === "tv" ? numEpisode : null
         };
         onSave(updated);
     };
@@ -63,7 +63,7 @@ export const EditView: React.FC<EditViewProps> = ({ file, onSave, onCancel }) =>
                 <div className="edit-view-form">
                     <div className="form-group">
                         <label className="form-label">
-                            {type === 'movie' ? <Film size={14} /> : <Tv size={14} />}
+                            {type === "movie" ? <Film size={14} /> : <Tv size={14} />}
                             Type
                         </label>
                         <div className="form-type-toggle">
@@ -72,8 +72,8 @@ export const EditView: React.FC<EditViewProps> = ({ file, onSave, onCancel }) =>
                                     type="radio"
                                     name="type"
                                     value="tv"
-                                    checked={type === 'tv'}
-                                    onChange={() => setType('tv')}
+                                    checked={type === "tv"}
+                                    onChange={() => setType("tv")}
                                 />
                                 TV Show
                             </label>
@@ -82,8 +82,8 @@ export const EditView: React.FC<EditViewProps> = ({ file, onSave, onCancel }) =>
                                     type="radio"
                                     name="type"
                                     value="movie"
-                                    checked={type === 'movie'}
-                                    onChange={() => setType('movie')}
+                                    checked={type === "movie"}
+                                    onChange={() => setType("movie")}
                                 />
                                 Movie
                             </label>
@@ -104,7 +104,7 @@ export const EditView: React.FC<EditViewProps> = ({ file, onSave, onCancel }) =>
                         />
                     </div>
 
-                    {type === 'tv' && (
+                    {type === "tv" && (
                         <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label" htmlFor="season">

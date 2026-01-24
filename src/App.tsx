@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Sidebar } from './components/Sidebar';
-import { DropZone } from './components/DropZone';
-import { QueueList } from './components/QueueList';
-import { EditView } from './components/EditView';
-import { SecureStatusView } from './components/SecureStatusView';
-import { SettingsView } from './components/SettingsView';
-import { FileMetadata, HistoryItem, Settings, UploadProgress, ViewState } from './types';
-import { HardDrive, Menu } from 'lucide-react';
-import { shouldRunConnectionCheck } from './logic/connectionMonitoring';
+import React, { useState, useEffect, useCallback } from "react";
+import { Sidebar } from "./components/Sidebar";
+import { DropZone } from "./components/DropZone";
+import { QueueList } from "./components/QueueList";
+import { EditView } from "./components/EditView";
+import { SecureStatusView } from "./components/SecureStatusView";
+import { SettingsView } from "./components/SettingsView";
+import { FileMetadata, HistoryItem, Settings, UploadProgress, ViewState } from "./types";
+import { HardDrive, Menu } from "lucide-react";
+import { shouldRunConnectionCheck } from "./logic/connectionMonitoring";
 
 // Helper to generate unique IDs
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -21,7 +21,13 @@ const App: React.FC = () => {
     const [isExporting, setIsExporting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ [key: number]: number }>({});
     const [settings, setSettings] = useState<Settings>({
-        url: '', targetFolderTv: '', targetFolderMovie: '', username: '', password: '', realDebridApiKey: '', connectionCheckInterval: 60
+        url: "",
+        targetFolderTv: "",
+        targetFolderMovie: "",
+        username: "",
+        password: "",
+        realDebridApiKey: "",
+        connectionCheckInterval: 60
     });
     const [nextcloudConnected, setNextcloudConnected] = useState(false);
     const [realDebridConnected, setRealDebridConnected] = useState(false);
@@ -38,7 +44,7 @@ const App: React.FC = () => {
                 const result = await window.api.testConnection();
                 setNextcloudConnected(result.success);
             } catch (error) {
-                console.error('[App] Nextcloud connection check failed:', error);
+                console.error("[App] Nextcloud connection check failed:", error);
                 setNextcloudConnected(false);
             }
         } else {
@@ -48,10 +54,12 @@ const App: React.FC = () => {
         // Check Real-Debrid connection
         if (settingsToCheck.realDebridApiKey) {
             try {
-                const result = await window.api.testRealDebridConnection(settingsToCheck.realDebridApiKey);
+                const result = await window.api.testRealDebridConnection(
+                    settingsToCheck.realDebridApiKey
+                );
                 setRealDebridConnected(result.success);
             } catch (error) {
-                console.error('[App] Real-Debrid connection check failed:', error);
+                console.error("[App] Real-Debrid connection check failed:", error);
                 setRealDebridConnected(false);
             }
         } else {
@@ -65,8 +73,8 @@ const App: React.FC = () => {
             const s = await window.api.getSettings();
             const loadedSettings = {
                 ...s,
-                targetFolderTv: s.targetFolderTv || s.targetFolder || '',
-                targetFolderMovie: s.targetFolderMovie || s.targetFolder || ''
+                targetFolderTv: s.targetFolderTv || s.targetFolder || "",
+                targetFolderMovie: s.targetFolderMovie || s.targetFolder || ""
             };
             setSettings(loadedSettings);
 
@@ -77,12 +85,12 @@ const App: React.FC = () => {
 
         // Setup Progress Listener
         window.api.onUploadProgress((data: UploadProgress) => {
-            setUploadProgress(prev => ({
+            setUploadProgress((prev) => ({
                 ...prev,
                 [data.index]: data.percent
             }));
 
-            setFiles(currentFiles => {
+            setFiles((currentFiles) => {
                 const newFiles = [...currentFiles];
                 if (newFiles[data.index]) {
                     newFiles[data.index] = {
@@ -99,12 +107,12 @@ const App: React.FC = () => {
     // Visibility change listener
     useEffect(() => {
         const handleVisibilityChange = () => {
-            setIsAppVisible(document.visibilityState === 'visible');
+            setIsAppVisible(document.visibilityState === "visible");
         };
 
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
         return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
         };
     }, []);
 
@@ -126,10 +134,10 @@ const App: React.FC = () => {
     }, [settings, isAppVisible, checkConnectionStatus]);
 
     const handleFilesDropped = async (droppedFiles: File[]) => {
-        const paths = droppedFiles.map(f => window.api.getFilePath(f));
+        const paths = droppedFiles.map((f) => window.api.getFilePath(f));
         try {
             const results = await window.api.parseFiles(paths);
-            setFiles(prev => [...prev, ...results]);
+            setFiles((prev) => [...prev, ...results]);
             // Navigate to Extraction view after files are added
             setTimeout(() => setCurrentView(ViewState.Extraction), 300);
         } catch (err) {
@@ -144,8 +152,8 @@ const App: React.FC = () => {
     };
 
     const handleRemoveFile = (index: number) => {
-        setFiles(prev => prev.filter((_, i) => i !== index));
-        setUploadProgress(prev => {
+        setFiles((prev) => prev.filter((_, i) => i !== index));
+        setUploadProgress((prev) => {
             const newProgress = { ...prev };
             delete newProgress[index];
             return newProgress;
@@ -153,7 +161,7 @@ const App: React.FC = () => {
     };
 
     const handleExport = async () => {
-        const validFiles = files.filter(f => f.valid);
+        const validFiles = files.filter((f) => f.valid);
         if (validFiles.length === 0) return;
 
         setIsExporting(true);
@@ -172,15 +180,15 @@ const App: React.FC = () => {
                     ...file,
                     id: file._retryId || generateId(), // Reuse ID if retry, else new ID
                     uploadedAt: now,
-                    uploadStatus: result.success ? 'success' : 'failed',
+                    uploadStatus: result.success ? "success" : "failed",
                     errorMessage: result.error,
                     isRetry,
-                    _retryId: undefined, // Clear the retry marker
+                    _retryId: undefined // Clear the retry marker
                 };
             });
 
             // Add to history (most recent first)
-            setHistory(prev => [...newHistoryItems, ...prev]);
+            setHistory((prev) => [...newHistoryItems, ...prev]);
 
             // Clear files from queue
             setFiles([]);
@@ -188,7 +196,6 @@ const App: React.FC = () => {
 
             // Navigate to Secure view to show results
             setTimeout(() => setCurrentView(ViewState.Secure), 300);
-
         } catch (error) {
             console.error(error);
             alert("Critical failure during export.");
@@ -212,14 +219,14 @@ const App: React.FC = () => {
             proposed: historyItem.proposed,
             valid: true, // Re-enable for queue
             error: undefined,
-            _retryId: historyItem.id, // Track this as a retry
+            _retryId: historyItem.id // Track this as a retry
         };
 
         // Add back to files queue
-        setFiles(prev => [...prev, retryFile]);
+        setFiles((prev) => [...prev, retryFile]);
 
         // Remove from history (will re-add on completion)
-        setHistory(prev => prev.filter(h => h.id !== historyItem.id));
+        setHistory((prev) => prev.filter((h) => h.id !== historyItem.id));
 
         // Navigate to extraction
         setCurrentView(ViewState.Extraction);
@@ -231,11 +238,11 @@ const App: React.FC = () => {
             ...updatedFile,
             proposed: newPath,
             valid: !!newPath,
-            error: newPath ? undefined : 'Path generation failed'
+            error: newPath ? undefined : "Path generation failed"
         };
 
         if (editingIndex !== null) {
-            setFiles(prev => {
+            setFiles((prev) => {
                 const newFiles = [...prev];
                 newFiles[editingIndex] = finalFile;
                 return newFiles;
@@ -265,7 +272,7 @@ const App: React.FC = () => {
         return result;
     };
 
-    const validCount = files.filter(f => f.valid).length;
+    const validCount = files.filter((f) => f.valid).length;
 
     // Render content based on current view or editing state
     const renderContent = () => {
@@ -301,12 +308,7 @@ const App: React.FC = () => {
                     />
                 );
             case ViewState.Secure:
-                return (
-                    <SecureStatusView
-                        history={history}
-                        onRetry={handleRetry}
-                    />
-                );
+                return <SecureStatusView history={history} onRetry={handleRetry} />;
             case ViewState.Map:
                 return (
                     <SettingsView
@@ -330,10 +332,7 @@ const App: React.FC = () => {
     return (
         <div className="app-container">
             {isSidebarOpen && (
-                <div
-                    className="sidebar-backdrop"
-                    onClick={() => setIsSidebarOpen(false)}
-                />
+                <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />
             )}
 
             <Sidebar
@@ -366,9 +365,7 @@ const App: React.FC = () => {
                     </button>
                 </header>
 
-                <main className="main-content-inner">
-                    {renderContent()}
-                </main>
+                <main className="main-content-inner">{renderContent()}</main>
             </div>
         </div>
     );

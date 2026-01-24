@@ -14,6 +14,10 @@ npm run build        # Full production build (main + renderer)
 npm run test         # Run tests with coverage (Node.js native test runner)
 npm run dist         # Build distributable package (.deb for Linux)
 npm run clean        # Remove dist/ and dist-electron/
+npm run lint         # Run ESLint on src and test directories
+npm run lint:fix     # Fix ESLint errors automatically
+npm run format       # Format code with Prettier
+npm run format:check # Check code formatting without writing
 ```
 
 ## Architecture

@@ -1,6 +1,6 @@
-import React from 'react';
-import { Archive, Shield, Box, X, HardDrive, Settings } from 'lucide-react';
-import { ViewState } from '../types';
+import React from "react";
+import { Archive, Shield, Box, X, HardDrive, Settings } from "lucide-react";
+import { ViewState } from "../types";
 
 interface SidebarProps {
     currentView: ViewState;
@@ -22,9 +22,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     realDebridConnected = false
 }) => {
     const navItems = [
-        { id: ViewState.Loot, label: 'Loot', icon: Box, description: 'Inventory' },
-        { id: ViewState.Extraction, label: 'Extraction', icon: Archive, description: 'Queue', badge: itemCount > 0 ? itemCount : undefined },
-        { id: ViewState.Secure, label: 'Secure', icon: Shield, description: 'Status' },
+        { id: ViewState.Loot, label: "Loot", icon: Box, description: "Inventory" },
+        {
+            id: ViewState.Extraction,
+            label: "Extraction",
+            icon: Archive,
+            description: "Queue",
+            badge: itemCount > 0 ? itemCount : undefined
+        },
+        { id: ViewState.Secure, label: "Secure", icon: Shield, description: "Status" }
     ];
 
     const handleNavClick = (view: ViewState) => {
@@ -33,7 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     };
 
     return (
-        <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <aside className={`sidebar ${isOpen ? "open" : ""}`}>
             <div className="sidebar-header">
                 <div className="sidebar-logo">
                     <div className="sidebar-logo-icon">
@@ -44,11 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <p className="sidebar-subtitle">v1.0</p>
                     </div>
                 </div>
-                <button
-                    className="sidebar-close"
-                    onClick={onClose}
-                    aria-label="Close sidebar"
-                >
+                <button className="sidebar-close" onClick={onClose} aria-label="Close sidebar">
                     <X size={24} aria-hidden="true" />
                 </button>
             </div>
@@ -58,8 +60,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                         key={item.id}
                         onClick={() => handleNavClick(item.id)}
-                        className={`nav-item ${currentView === item.id ? 'active' : ''}`}
-                        aria-current={currentView === item.id ? 'page' : undefined}
+                        className={`nav-item ${currentView === item.id ? "active" : ""}`}
+                        aria-current={currentView === item.id ? "page" : undefined}
                     >
                         <item.icon className="nav-item-icon" aria-hidden="true" />
                         <div className="nav-item-content">
@@ -67,7 +69,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             <span className="nav-item-description">{item.description}</span>
                         </div>
                         {item.badge !== undefined && (
-                            <span className="nav-badge" aria-label={`${item.badge} items`}>{item.badge}</span>
+                            <span className="nav-badge" aria-label={`${item.badge} items`}>
+                                {item.badge}
+                            </span>
                         )}
                     </button>
                 ))}
@@ -76,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="sidebar-footer">
                 {/* Settings Link */}
                 <button
-                    className={`sidebar-settings-link ${currentView === ViewState.Map ? 'active' : ''}`}
+                    className={`sidebar-settings-link ${currentView === ViewState.Map ? "active" : ""}`}
                     onClick={() => handleNavClick(ViewState.Map)}
                     aria-label="Open settings"
                 >
@@ -90,19 +94,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div className="system-status-row">
                         <span className="system-status-label">Nextcloud</span>
                         <span
-                            className={`system-status-value ${nextcloudConnected ? 'success' : 'warning'}`}
-                            aria-label={nextcloudConnected ? 'Nextcloud connected' : 'Nextcloud not configured'}
+                            className={`system-status-value ${nextcloudConnected ? "success" : "warning"}`}
+                            aria-label={
+                                nextcloudConnected
+                                    ? "Nextcloud connected"
+                                    : "Nextcloud not configured"
+                            }
                         >
-                            {nextcloudConnected ? 'Connected' : 'Not Configured'}
+                            {nextcloudConnected ? "Connected" : "Not Configured"}
                         </span>
                     </div>
                     <div className="system-status-row">
                         <span className="system-status-label">Real-Debrid</span>
                         <span
-                            className={`system-status-value ${realDebridConnected ? 'success' : 'warning'}`}
-                            aria-label={realDebridConnected ? 'Real-Debrid connected' : 'Real-Debrid not configured'}
+                            className={`system-status-value ${realDebridConnected ? "success" : "warning"}`}
+                            aria-label={
+                                realDebridConnected
+                                    ? "Real-Debrid connected"
+                                    : "Real-Debrid not configured"
+                            }
                         >
-                            {realDebridConnected ? 'Connected' : 'Not Configured'}
+                            {realDebridConnected ? "Connected" : "Not Configured"}
                         </span>
                     </div>
                 </div>
@@ -110,4 +122,3 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </aside>
     );
 };
-

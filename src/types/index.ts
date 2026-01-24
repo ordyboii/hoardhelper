@@ -1,19 +1,19 @@
 export enum ViewState {
-    Loot = 'Loot',
-    Extraction = 'Extraction',
-    Secure = 'Secure',
-    Map = 'Map'
+    Loot = "Loot",
+    Extraction = "Extraction",
+    Secure = "Secure",
+    Map = "Map"
 }
 
 export enum FileStatus {
-    Ready = 'Ready',
-    Processing = 'Processing',
-    Secured = 'Secured',
-    Error = 'Error'
+    Ready = "Ready",
+    Processing = "Processing",
+    Secured = "Secured",
+    Error = "Error"
 }
 
 export interface ParseResult {
-    type?: 'tv' | 'movie';
+    type?: "tv" | "movie";
     series: string;
     season?: number | null;
     episode?: number | null;
@@ -32,11 +32,11 @@ export interface FileMetadata extends ParseResult {
 }
 
 export interface HistoryItem extends FileMetadata {
-    id: string;                           // Unique ID for tracking retries
-    uploadedAt: Date;                     // When the upload completed
-    uploadStatus: 'success' | 'failed';   // Final status
-    errorMessage?: string;                // Error details if failed
-    isRetry: boolean;                     // Was this a retry attempt?
+    id: string; // Unique ID for tracking retries
+    uploadedAt: Date; // When the upload completed
+    uploadStatus: "success" | "failed"; // Final status
+    errorMessage?: string; // Error details if failed
+    isRetry: boolean; // Was this a retry attempt?
 }
 
 export interface Settings {

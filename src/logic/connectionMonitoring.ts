@@ -52,5 +52,5 @@ export function secondsToMs(seconds: number): number {
  * @returns true if checks should run, false if paused
  */
 export function shouldRunConnectionCheck(visibilityState: DocumentVisibilityState): boolean {
-    return visibilityState === 'visible';
+    return visibilityState === "visible";
 }

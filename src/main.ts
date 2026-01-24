@@ -1,19 +1,26 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
-import Store from 'electron-store';
-import { fileURLToPath } from 'url';
-import { parseFilename } from './logic/parser.js';
-import { generateNewPath } from './logic/exporter.js';
-import { initializeClient, testConnection, uploadFileToNextcloud } from './logic/nextcloud.js';
-import { initializeRealDebrid, testRealDebridConnection } from './logic/realdebrid.js';
-import { encryptString, decryptString, isEncryptionAvailable } from './logic/secureStorage.js';
-import type { Settings, StoredSettings, FileMetadata, ParseResult, ExportResult } from './types/index.js';
+import { app, BrowserWindow, ipcMain } from "electron";
+import path from "path";
+import Store from "electron-store";
+import { fileURLToPath } from "url";
+import { parseFilename } from "./logic/parser.js";
+import { generateNewPath } from "./logic/exporter.js";
+import { initializeClient, testConnection, uploadFileToNextcloud } from "./logic/nextcloud.js";
+import { initializeRealDebrid, testRealDebridConnection } from "./logic/realdebrid.js";
+import { encryptString, decryptString, isEncryptionAvailable } from "./logic/secureStorage.js";
+import type {
+    Settings,
+    StoredSettings,
+    FileMetadata,
+    ParseResult,
+    ExportResult
+} from "./types/index.js";
 
 // Workaround for __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Store with specific types if needed, or cast later
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const store = new Store() as any;
 let mainWindow: BrowserWindow | null = null;
 
@@ -68,9 +75,10 @@ function prependTargetBasePath(
     }
 
     // Determine target base folder based on media type
-    const targetBase = metadata.type === 'tv'
-        ? settings?.targetFolderTv || settings?.targetFolder || ''
-        : settings?.targetFolderMovie || settings?.targetFolder || '';
+    const targetBase =
+        metadata.type === "tv"
+            ? settings?.targetFolderTv || settings?.targetFolder || ""
+            : settings?.targetFolderMovie || settings?.targetFolder || "";
 
     // Guard: No target base configured
     if (!targetBase) {
@@ -78,11 +86,11 @@ function prependTargetBasePath(
     }
 
     // Security: Sanitize base path to prevent traversal
-    const safeBase = targetBase.replace(/\.\./g, '');
+    const safeBase = targetBase.replace(/\.\./g, "");
 
     // Ensure no double slashes
-    const base = safeBase.replace(/\/$/, '');
-    const rel = proposedPath.replace(/^\//, '');
+    const base = safeBase.replace(/\/$/, "");
+    const rel = proposedPath.replace(/^\//, "");
 
     return `${base}/${rel}`;
 }
@@ -93,11 +101,11 @@ function prependTargetBasePath(
  */
 function decryptSettings(stored: StoredSettings): Settings {
     const settings: Settings = {
-        url: stored.url || '',
-        targetFolderTv: stored.targetFolderTv || '',
-        targetFolderMovie: stored.targetFolderMovie || '',
-        username: stored.username || '',
-        password: '',
+        url: stored.url || "",
+        targetFolderTv: stored.targetFolderTv || "",
+        targetFolderMovie: stored.targetFolderMovie || "",
+        username: stored.username || "",
+        password: "",
         connectionCheckInterval: stored.connectionCheckInterval
     };
 
@@ -108,9 +116,10 @@ function decryptSettings(stored: StoredSettings): Settings {
 
     // Migration: If old unencrypted data exists, use it and return early
     if (!stored._encrypted) {
-        console.log('[SecureStorage] Migrating from unencrypted storage format');
+        console.log("[SecureStorage] Migrating from unencrypted storage format");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const legacy = stored as any;
-        settings.password = legacy.password || '';
+        settings.password = legacy.password || "";
         settings.realDebridApiKey = legacy.realDebridApiKey;
         return settings;
     }
@@ -118,7 +127,7 @@ function decryptSettings(stored: StoredSettings): Settings {
     // Decrypt password if present
     if (stored.password_encrypted) {
         const decrypted = decryptString(stored.password_encrypted);
-        settings.password = decrypted || '';
+        settings.password = decrypted || "";
     }
 
     // Decrypt Real-Debrid API key if present
@@ -135,17 +144,17 @@ function createWindow() {
         width: 1000,
         height: 800,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.cjs'),
+            preload: path.join(__dirname, "preload.cjs"),
             nodeIntegration: false,
             contextIsolation: true,
             devTools: false
         }
     });
 
-    if (process.env.NODE_ENV === 'development') {
-        mainWindow.loadURL('http://localhost:5173');
+    if (process.env.NODE_ENV === "development") {
+        mainWindow.loadURL("http://localhost:5173");
     } else {
-        mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+        mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
     }
     mainWindow.webContents.openDevTools();
 }
@@ -154,7 +163,7 @@ app.whenReady().then(() => {
     createWindow();
 
     // Auto-initialize Nextcloud if settings exist
-    const stored = store.get('nextcloud') as StoredSettings | undefined;
+    const stored = store.get("nextcloud") as StoredSettings | undefined;
     if (stored) {
         const settings = decryptSettings(stored);
         initializeClient(settings.url, settings.username, settings.password);
@@ -164,15 +173,15 @@ app.whenReady().then(() => {
         }
     }
 
-    app.on('activate', () => {
+    app.on("activate", () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow();
         }
     });
 });
 
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
         app.quit();
     }
 });
@@ -180,28 +189,28 @@ app.on('window-all-closed', () => {
 // IPC Handlers
 
 // Log handler
-ipcMain.on('console-log', (event, msg) => {
+ipcMain.on("console-log", (event, msg) => {
     console.log(`[UI] ${msg}`);
 });
 
 // Settings Handlers
-ipcMain.handle('get-settings', () => {
-    const stored = store.get('nextcloud') as StoredSettings | undefined;
+ipcMain.handle("get-settings", () => {
+    const stored = store.get("nextcloud") as StoredSettings | undefined;
     if (!stored) {
         return {};
     }
     return decryptSettings(stored);
 });
 
-ipcMain.handle('save-settings', (event, settings: Settings) => {
+ipcMain.handle("save-settings", (event, settings: Settings) => {
     // Log encryption status on first save
-    if (!store.has('nextcloud')) {
+    if (!store.has("nextcloud")) {
         console.log(`[SecureStorage] Encryption available: ${isEncryptionAvailable()}`);
     }
 
     // Encrypt sensitive fields before storing
     const storedSettings = encryptSettings(settings);
-    store.set('nextcloud', storedSettings);
+    store.set("nextcloud", storedSettings);
 
     // Initialize clients with decrypted credentials
     const success = initializeClient(settings.url, settings.username, settings.password);
@@ -214,7 +223,7 @@ ipcMain.handle('save-settings', (event, settings: Settings) => {
     return success;
 });
 
-ipcMain.handle('test-connection', async (event, settings?: Settings) => {
+ipcMain.handle("test-connection", async (event, settings?: Settings) => {
     try {
         if (settings) {
             await testConnection(settings.url, settings.username, settings.password);
@@ -222,25 +231,26 @@ ipcMain.handle('test-connection', async (event, settings?: Settings) => {
             await testConnection();
         }
         return { success: true };
-    } catch (err: any) {
-        return { success: false, error: err.message };
+    } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        return { success: false, error: message };
     }
 });
 
-ipcMain.handle('test-realdebrid-connection', async (event, apiKey?: string) => {
+ipcMain.handle("test-realdebrid-connection", async (event, apiKey?: string) => {
     return await testRealDebridConnection(apiKey);
 });
 
 // 1. Parse Files
-ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
+ipcMain.handle("parse-files", async (event, filePaths: string[]) => {
     let settings: Settings | undefined;
     try {
-        const stored = store.get('nextcloud') as StoredSettings | undefined;
+        const stored = store.get("nextcloud") as StoredSettings | undefined;
         if (stored) {
             settings = decryptSettings(stored);
         }
     } catch (e) {
-        console.error('[Main] Failed to read settings:', e);
+        console.error("[Main] Failed to read settings:", e);
     }
 
     console.log(`[Main] Parsing files. Target folders from settings:`);
@@ -263,7 +273,7 @@ ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
             } else {
                 results.push({
                     // Create a dummy parse result for the error case
-                    series: '',
+                    series: "",
                     ext: path.extname(filePath),
                     originalName: path.basename(filePath),
                     fullPath: filePath,
@@ -272,16 +282,17 @@ ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
                     error: "Could not parse metadata"
                 });
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error(`[Main] Error parsing file ${filePath}:`, error);
+            const message = error instanceof Error ? error.message : "Unknown error";
             results.push({
-                series: 'Error',
+                series: "Error",
                 ext: path.extname(filePath),
                 originalName: path.basename(filePath),
                 fullPath: filePath,
                 proposed: null,
                 valid: false,
-                error: `System Error: ${error.message}`
+                error: `System Error: ${message}`
             });
         }
     }
@@ -289,8 +300,8 @@ ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
 });
 
 // 2. Generate Path (Helper for Edit Mode)
-ipcMain.handle('generate-path', (event, metadata: FileMetadata) => {
-    const stored = store.get('nextcloud') as StoredSettings | undefined;
+ipcMain.handle("generate-path", (event, metadata: FileMetadata) => {
+    const stored = store.get("nextcloud") as StoredSettings | undefined;
     const settings = stored ? decryptSettings(stored) : undefined;
 
     const basePath = generateNewPath(metadata);
@@ -298,9 +309,9 @@ ipcMain.handle('generate-path', (event, metadata: FileMetadata) => {
 });
 
 // 3. Export/Upload Files
-ipcMain.handle('export-files', async (event, filesToExport: FileMetadata[]) => {
-    const stored = store.get('nextcloud') as StoredSettings | undefined;
-    const settings = stored ? decryptSettings(stored) : undefined;
+ipcMain.handle("export-files", async (event, filesToExport: FileMetadata[]) => {
+    const stored = store.get("nextcloud") as StoredSettings | undefined;
+    const _settings = stored ? decryptSettings(stored) : undefined;
     const results: ExportResult[] = [];
 
     console.log(`[Main] Exporting (Upload) ${filesToExport.length} files.`);
@@ -309,10 +320,10 @@ ipcMain.handle('export-files', async (event, filesToExport: FileMetadata[]) => {
         const file = filesToExport[i];
 
         // Notify start
-        mainWindow?.webContents.send('upload-progress', {
+        mainWindow?.webContents.send("upload-progress", {
             index: i,
             percent: 0,
-            status: 'Starting Upload...'
+            status: "Starting Upload..."
         });
 
         let result: ExportResult = { success: false };
@@ -322,13 +333,17 @@ ipcMain.handle('export-files', async (event, filesToExport: FileMetadata[]) => {
         const maxAttempts = 2;
 
         while (attempts < maxAttempts) {
-            result = await uploadFileToNextcloud(file.fullPath, file.proposed, (percent: number) => {
-                mainWindow?.webContents.send('upload-progress', {
-                    index: i,
-                    percent: percent,
-                    status: `Uploading (${percent}%)`
-                });
-            });
+            result = await uploadFileToNextcloud(
+                file.fullPath,
+                file.proposed,
+                (percent: number) => {
+                    mainWindow?.webContents.send("upload-progress", {
+                        index: i,
+                        percent: percent,
+                        status: `Uploading (${percent}%)`
+                    });
+                }
+            );
 
             if (result.success) break;
             attempts++;
@@ -338,10 +353,10 @@ ipcMain.handle('export-files', async (event, filesToExport: FileMetadata[]) => {
         results.push(result);
 
         // Notify done
-        mainWindow?.webContents.send('upload-progress', {
+        mainWindow?.webContents.send("upload-progress", {
             index: i,
             percent: 100,
-            status: result.success ? 'Done' : 'Failed'
+            status: result.success ? "Done" : "Failed"
         });
     }
     return results;

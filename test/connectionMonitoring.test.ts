@@ -1,5 +1,5 @@
-import { describe, it, beforeEach, afterEach, mock } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
+import assert from "node:assert";
 import {
     clampCheckInterval,
     msToSeconds,
@@ -8,152 +8,152 @@ import {
     MIN_CHECK_INTERVAL,
     MAX_CHECK_INTERVAL,
     DEFAULT_CHECK_INTERVAL
-} from '../src/logic/connectionMonitoring.js';
+} from "../src/logic/connectionMonitoring.js";
 
-describe('Connection Monitoring Integration Tests', () => {
-    describe('Interval clamping - Valid ranges', () => {
-        it('should accept valid interval within range', () => {
+describe("Connection Monitoring Integration Tests", () => {
+    describe("Interval clamping - Valid ranges", () => {
+        it("should accept valid interval within range", () => {
             const result = clampCheckInterval(60);
             assert.strictEqual(result, 60);
         });
 
-        it('should accept minimum interval', () => {
+        it("should accept minimum interval", () => {
             const result = clampCheckInterval(MIN_CHECK_INTERVAL);
             assert.strictEqual(result, MIN_CHECK_INTERVAL);
         });
 
-        it('should accept maximum interval', () => {
+        it("should accept maximum interval", () => {
             const result = clampCheckInterval(MAX_CHECK_INTERVAL);
             assert.strictEqual(result, MAX_CHECK_INTERVAL);
         });
 
-        it('should accept interval just above minimum', () => {
+        it("should accept interval just above minimum", () => {
             const result = clampCheckInterval(MIN_CHECK_INTERVAL + 1);
             assert.strictEqual(result, MIN_CHECK_INTERVAL + 1);
         });
 
-        it('should accept interval just below maximum', () => {
+        it("should accept interval just below maximum", () => {
             const result = clampCheckInterval(MAX_CHECK_INTERVAL - 1);
             assert.strictEqual(result, MAX_CHECK_INTERVAL - 1);
         });
     });
 
-    describe('Interval clamping - Below minimum', () => {
-        it('should clamp to minimum when value is below range', () => {
+    describe("Interval clamping - Below minimum", () => {
+        it("should clamp to minimum when value is below range", () => {
             const result = clampCheckInterval(10);
             assert.strictEqual(result, MIN_CHECK_INTERVAL);
         });
 
-        it('should clamp to minimum when value is 0', () => {
+        it("should clamp to minimum when value is 0", () => {
             const result = clampCheckInterval(0);
             assert.strictEqual(result, MIN_CHECK_INTERVAL);
         });
 
-        it('should clamp to minimum when value is negative', () => {
+        it("should clamp to minimum when value is negative", () => {
             const result = clampCheckInterval(-50);
             assert.strictEqual(result, MIN_CHECK_INTERVAL);
         });
 
-        it('should clamp to minimum when value is 1 below minimum', () => {
+        it("should clamp to minimum when value is 1 below minimum", () => {
             const result = clampCheckInterval(MIN_CHECK_INTERVAL - 1);
             assert.strictEqual(result, MIN_CHECK_INTERVAL);
         });
     });
 
-    describe('Interval clamping - Above maximum', () => {
-        it('should clamp to maximum when value is above range', () => {
+    describe("Interval clamping - Above maximum", () => {
+        it("should clamp to maximum when value is above range", () => {
             const result = clampCheckInterval(500);
             assert.strictEqual(result, MAX_CHECK_INTERVAL);
         });
 
-        it('should clamp to maximum when value is very large', () => {
+        it("should clamp to maximum when value is very large", () => {
             const result = clampCheckInterval(999999);
             assert.strictEqual(result, MAX_CHECK_INTERVAL);
         });
 
-        it('should clamp to maximum when value is 1 above maximum', () => {
+        it("should clamp to maximum when value is 1 above maximum", () => {
             const result = clampCheckInterval(MAX_CHECK_INTERVAL + 1);
             assert.strictEqual(result, MAX_CHECK_INTERVAL);
         });
     });
 
-    describe('Interval clamping - Invalid inputs', () => {
-        it('should return default for NaN', () => {
+    describe("Interval clamping - Invalid inputs", () => {
+        it("should return default for NaN", () => {
             const result = clampCheckInterval(NaN);
             assert.strictEqual(result, DEFAULT_CHECK_INTERVAL);
         });
 
-        it('should return default for Infinity', () => {
+        it("should return default for Infinity", () => {
             const result = clampCheckInterval(Infinity);
             assert.strictEqual(result, DEFAULT_CHECK_INTERVAL);
         });
 
-        it('should return default for -Infinity', () => {
+        it("should return default for -Infinity", () => {
             const result = clampCheckInterval(-Infinity);
             assert.strictEqual(result, DEFAULT_CHECK_INTERVAL);
         });
 
-        it('should return default for parseFloat result of empty string', () => {
-            const result = clampCheckInterval(parseFloat(''));
+        it("should return default for parseFloat result of empty string", () => {
+            const result = clampCheckInterval(parseFloat(""));
             assert.strictEqual(result, DEFAULT_CHECK_INTERVAL);
         });
 
-        it('should return default for parseFloat result of invalid string', () => {
-            const result = clampCheckInterval(parseFloat('abc'));
+        it("should return default for parseFloat result of invalid string", () => {
+            const result = clampCheckInterval(parseFloat("abc"));
             assert.strictEqual(result, DEFAULT_CHECK_INTERVAL);
         });
     });
 
-    describe('Time conversion utilities', () => {
-        it('should convert milliseconds to seconds', () => {
+    describe("Time conversion utilities", () => {
+        it("should convert milliseconds to seconds", () => {
             assert.strictEqual(msToSeconds(1000), 1);
             assert.strictEqual(msToSeconds(60000), 60);
             assert.strictEqual(msToSeconds(300000), 300);
         });
 
-        it('should floor partial seconds', () => {
+        it("should floor partial seconds", () => {
             assert.strictEqual(msToSeconds(1500), 1);
             assert.strictEqual(msToSeconds(999), 0);
             assert.strictEqual(msToSeconds(5999), 5);
         });
 
-        it('should convert seconds to milliseconds', () => {
+        it("should convert seconds to milliseconds", () => {
             assert.strictEqual(secondsToMs(1), 1000);
             assert.strictEqual(secondsToMs(60), 60000);
             assert.strictEqual(secondsToMs(300), 300000);
         });
 
-        it('should handle fractional seconds in conversion', () => {
+        it("should handle fractional seconds in conversion", () => {
             assert.strictEqual(secondsToMs(1.5), 1500);
             assert.strictEqual(secondsToMs(0.5), 500);
         });
 
-        it('should maintain round-trip conversion', () => {
+        it("should maintain round-trip conversion", () => {
             const original = 60;
             const converted = msToSeconds(secondsToMs(original));
             assert.strictEqual(converted, original);
         });
     });
 
-    describe('Visibility-based check control', () => {
-        it('should run checks when app is visible', () => {
-            const result = shouldRunConnectionCheck('visible');
+    describe("Visibility-based check control", () => {
+        it("should run checks when app is visible", () => {
+            const result = shouldRunConnectionCheck("visible");
             assert.strictEqual(result, true);
         });
 
-        it('should pause checks when app is hidden', () => {
-            const result = shouldRunConnectionCheck('hidden');
+        it("should pause checks when app is hidden", () => {
+            const result = shouldRunConnectionCheck("hidden");
             assert.strictEqual(result, false);
         });
 
-        it('should pause checks when app is prerendering', () => {
-            // @ts-ignore - Testing edge case
-            const result = shouldRunConnectionCheck('prerender');
+        it("should pause checks when app is prerendering", () => {
+            // @ts-expect-error - Testing edge case
+            const result = shouldRunConnectionCheck("prerender");
             assert.strictEqual(result, false);
         });
     });
 
-    describe('Interval timer behavior', () => {
+    describe("Interval timer behavior", () => {
         let mockSetInterval: any;
         let mockClearInterval: any;
         let intervalCallbacks: Map<number, { callback: Function; delay: number }>;
@@ -183,19 +183,19 @@ describe('Connection Monitoring Integration Tests', () => {
             intervalCallbacks.clear();
         });
 
-        it('should create interval with correct delay in milliseconds', () => {
+        it("should create interval with correct delay in milliseconds", () => {
             const intervalSeconds = 60;
             const expectedMs = secondsToMs(intervalSeconds);
             const callback = () => {};
 
-            const intervalId = setInterval(callback, expectedMs);
+            const _intervalId = setInterval(callback, expectedMs);
 
             assert.strictEqual(mockSetInterval.mock.callCount(), 1);
             const call = mockSetInterval.mock.calls[0];
             assert.strictEqual(call.arguments[1], 60000); // 60 seconds = 60000ms
         });
 
-        it('should respect minimum interval constraint', () => {
+        it("should respect minimum interval constraint", () => {
             const tooLowInterval = 10; // Below MIN_CHECK_INTERVAL (30)
             const clampedInterval = clampCheckInterval(tooLowInterval);
             const delayMs = secondsToMs(clampedInterval);
@@ -207,7 +207,7 @@ describe('Connection Monitoring Integration Tests', () => {
             assert.strictEqual(call.arguments[1], secondsToMs(MIN_CHECK_INTERVAL));
         });
 
-        it('should respect maximum interval constraint', () => {
+        it("should respect maximum interval constraint", () => {
             const tooHighInterval = 500; // Above MAX_CHECK_INTERVAL (300)
             const clampedInterval = clampCheckInterval(tooHighInterval);
             const delayMs = secondsToMs(clampedInterval);
@@ -219,7 +219,7 @@ describe('Connection Monitoring Integration Tests', () => {
             assert.strictEqual(call.arguments[1], secondsToMs(MAX_CHECK_INTERVAL));
         });
 
-        it('should clear old interval when settings change', () => {
+        it("should clear old interval when settings change", () => {
             const callback = () => {};
 
             // Create initial interval
@@ -237,7 +237,7 @@ describe('Connection Monitoring Integration Tests', () => {
             assert.ok(!intervalCallbacks.has(intervalId1));
         });
 
-        it('should update interval delay when settings change', () => {
+        it("should update interval delay when settings change", () => {
             const callback = () => {};
 
             // Initial interval: 60 seconds
@@ -253,8 +253,8 @@ describe('Connection Monitoring Integration Tests', () => {
         });
     });
 
-    describe('Visibility change integration', () => {
-        it('should simulate pausing checks when app becomes hidden', () => {
+    describe("Visibility change integration", () => {
+        it("should simulate pausing checks when app becomes hidden", () => {
             let checksRun = 0;
             const runCheckIfVisible = (visibilityState: DocumentVisibilityState) => {
                 if (shouldRunConnectionCheck(visibilityState)) {
@@ -263,19 +263,19 @@ describe('Connection Monitoring Integration Tests', () => {
             };
 
             // App starts visible
-            runCheckIfVisible('visible');
+            runCheckIfVisible("visible");
             assert.strictEqual(checksRun, 1);
 
             // App becomes hidden
-            runCheckIfVisible('hidden');
+            runCheckIfVisible("hidden");
             assert.strictEqual(checksRun, 1); // Should not increment
 
             // App becomes visible again
-            runCheckIfVisible('visible');
+            runCheckIfVisible("visible");
             assert.strictEqual(checksRun, 2);
         });
 
-        it('should simulate multiple visibility state changes', () => {
+        it("should simulate multiple visibility state changes", () => {
             const checkLog: boolean[] = [];
             const runCheckIfVisible = (visibilityState: DocumentVisibilityState) => {
                 const shouldRun = shouldRunConnectionCheck(visibilityState);
@@ -283,18 +283,18 @@ describe('Connection Monitoring Integration Tests', () => {
             };
 
             // Simulate visibility state changes
-            runCheckIfVisible('visible');  // true
-            runCheckIfVisible('visible');  // true
-            runCheckIfVisible('hidden');   // false
-            runCheckIfVisible('hidden');   // false
-            runCheckIfVisible('visible');  // true
+            runCheckIfVisible("visible"); // true
+            runCheckIfVisible("visible"); // true
+            runCheckIfVisible("hidden"); // false
+            runCheckIfVisible("hidden"); // false
+            runCheckIfVisible("visible"); // true
 
             assert.deepStrictEqual(checkLog, [true, true, false, false, true]);
         });
     });
 
-    describe('Real-world scenario simulations', () => {
-        it('should handle user changing interval from valid to invalid value', () => {
+    describe("Real-world scenario simulations", () => {
+        it("should handle user changing interval from valid to invalid value", () => {
             // User enters 60 (valid)
             let interval = clampCheckInterval(60);
             assert.strictEqual(interval, 60);
@@ -308,7 +308,7 @@ describe('Connection Monitoring Integration Tests', () => {
             assert.strictEqual(interval, 45);
         });
 
-        it('should handle user entering out-of-bounds values', () => {
+        it("should handle user entering out-of-bounds values", () => {
             // User tries to set very low interval
             let interval = clampCheckInterval(5);
             assert.strictEqual(interval, MIN_CHECK_INTERVAL);
@@ -318,7 +318,7 @@ describe('Connection Monitoring Integration Tests', () => {
             assert.strictEqual(interval, MAX_CHECK_INTERVAL);
         });
 
-        it('should handle edge case of boundary values', () => {
+        it("should handle edge case of boundary values", () => {
             // Test exact boundaries
             assert.strictEqual(clampCheckInterval(29), MIN_CHECK_INTERVAL);
             assert.strictEqual(clampCheckInterval(30), 30);
@@ -326,9 +326,13 @@ describe('Connection Monitoring Integration Tests', () => {
             assert.strictEqual(clampCheckInterval(301), MAX_CHECK_INTERVAL);
         });
 
-        it('should handle rapid visibility changes', () => {
+        it("should handle rapid visibility changes", () => {
             const states: DocumentVisibilityState[] = [
-                'visible', 'hidden', 'visible', 'hidden', 'visible'
+                "visible",
+                "hidden",
+                "visible",
+                "hidden",
+                "visible"
             ];
             const results = states.map(shouldRunConnectionCheck);
 
@@ -336,18 +340,18 @@ describe('Connection Monitoring Integration Tests', () => {
         });
     });
 
-    describe('Constants validation', () => {
-        it('should have valid minimum interval', () => {
+    describe("Constants validation", () => {
+        it("should have valid minimum interval", () => {
             assert.strictEqual(MIN_CHECK_INTERVAL, 30);
             assert.ok(MIN_CHECK_INTERVAL > 0);
         });
 
-        it('should have valid maximum interval', () => {
+        it("should have valid maximum interval", () => {
             assert.strictEqual(MAX_CHECK_INTERVAL, 300);
             assert.ok(MAX_CHECK_INTERVAL > MIN_CHECK_INTERVAL);
         });
 
-        it('should have valid default interval', () => {
+        it("should have valid default interval", () => {
             assert.strictEqual(DEFAULT_CHECK_INTERVAL, 60);
             assert.ok(DEFAULT_CHECK_INTERVAL >= MIN_CHECK_INTERVAL);
             assert.ok(DEFAULT_CHECK_INTERVAL <= MAX_CHECK_INTERVAL);

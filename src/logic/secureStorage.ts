@@ -1,4 +1,4 @@
-import { safeStorage } from 'electron';
+import { safeStorage } from "electron";
 
 /**
  * Secure storage utilities using Electron's safeStorage API.
@@ -14,14 +14,14 @@ import { safeStorage } from 'electron';
  */
 export function encryptString(plaintext: string): string {
     if (!safeStorage.isEncryptionAvailable()) {
-        console.warn('[SecureStorage] Encryption not available on this system. Storing as base64.');
+        console.warn("[SecureStorage] Encryption not available on this system. Storing as base64.");
         // Fallback to base64 encoding (NOT secure, but better than nothing)
-        return Buffer.from(plaintext).toString('base64');
+        return Buffer.from(plaintext).toString("base64");
     }
 
     const encrypted = safeStorage.encryptString(plaintext);
     // Convert to base64 for storage
-    return encrypted.toString('base64');
+    return encrypted.toString("base64");
 }
 
 /**
@@ -31,13 +31,13 @@ export function decryptString(encrypted: string): string | null {
     try {
         if (!safeStorage.isEncryptionAvailable()) {
             // Fallback decoding
-            return Buffer.from(encrypted, 'base64').toString('utf-8');
+            return Buffer.from(encrypted, "base64").toString("utf-8");
         }
 
-        const buffer = Buffer.from(encrypted, 'base64');
+        const buffer = Buffer.from(encrypted, "base64");
         return safeStorage.decryptString(buffer);
     } catch (error) {
-        console.error('[SecureStorage] Decryption failed:', error);
+        console.error("[SecureStorage] Decryption failed:", error);
         return null;
     }
 }

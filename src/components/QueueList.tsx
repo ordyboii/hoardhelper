@@ -1,6 +1,6 @@
-import React from 'react';
-import { Trash2, Film, Tv, CheckCircle, Loader2, Play, Edit } from 'lucide-react';
-import { FileMetadata, FileStatus } from '../types';
+import React from "react";
+import { Trash2, Film, Tv, CheckCircle, Loader2, Play, Edit } from "lucide-react";
+import { FileMetadata, FileStatus } from "../types";
 
 interface QueueListProps {
     files: FileMetadata[];
@@ -20,14 +20,14 @@ export const QueueList: React.FC<QueueListProps> = ({
     progress
 }) => {
     const hasFiles = files.length > 0;
-    const validCount = files.filter(f => f.valid).length;
-    const allSecured = hasFiles && files.every(f => !f.valid && f.error?.includes('SECURED'));
+    const validCount = files.filter((f) => f.valid).length;
+    const allSecured = hasFiles && files.every((f) => !f.valid && f.error?.includes("SECURED"));
 
     const getFileStatus = (file: FileMetadata, index: number): FileStatus => {
         if (progress[index] !== undefined && progress[index] < 100) {
             return FileStatus.Processing;
         }
-        if (!file.valid && file.error?.includes('SECURED')) {
+        if (!file.valid && file.error?.includes("SECURED")) {
             return FileStatus.Secured;
         }
         if (!file.valid && file.error) {
@@ -42,13 +42,15 @@ export const QueueList: React.FC<QueueListProps> = ({
                 <div className="view-header-row">
                     <div>
                         <h2 className="view-title">Extraction Queue</h2>
-                        <p className="view-description">Review standardized names before securing.</p>
+                        <p className="view-description">
+                            Review standardized names before securing.
+                        </p>
                     </div>
                     <button
                         className="btn-primary"
                         onClick={onProcess}
                         disabled={validCount === 0 || isProcessing || allSecured}
-                        style={{ width: 'auto' }}
+                        style={{ width: "auto" }}
                     >
                         {isProcessing ? (
                             <>
@@ -64,7 +66,9 @@ export const QueueList: React.FC<QueueListProps> = ({
                             <>
                                 <Play size={18} aria-hidden="true" />
                                 Secure in Hoard
-                                <span className="badge" aria-label={`${validCount} files ready`}>{validCount}</span>
+                                <span className="badge" aria-label={`${validCount} files ready`}>
+                                    {validCount}
+                                </span>
                             </>
                         )}
                     </button>
@@ -92,10 +96,16 @@ export const QueueList: React.FC<QueueListProps> = ({
                             const isFileProcessing = status === FileStatus.Processing;
 
                             return (
-                                <div key={`${file.originalName}-${index}`} className="queue-row" tabIndex={0}>
+                                <div
+                                    key={`${file.originalName}-${index}`}
+                                    className="queue-row"
+                                    tabIndex={0}
+                                >
                                     {/* Type Icon */}
-                                    <div className={`queue-cell queue-type-icon ${file.type === 'tv' ? 'tv' : 'movie'}`}>
-                                        {file.type === 'movie' ? (
+                                    <div
+                                        className={`queue-cell queue-type-icon ${file.type === "tv" ? "tv" : "movie"}`}
+                                    >
+                                        {file.type === "movie" ? (
                                             <>
                                                 <Film aria-hidden="true" />
                                                 <span className="sr-only">Movie</span>
@@ -109,20 +119,30 @@ export const QueueList: React.FC<QueueListProps> = ({
                                     </div>
 
                                     {/* Original Filename */}
-                                    <div className="queue-cell queue-original" title={file.originalName}>
+                                    <div
+                                        className="queue-cell queue-original"
+                                        title={file.originalName}
+                                    >
                                         {file.originalName}
                                     </div>
 
                                     {/* Proposed Standard */}
-                                    <div className="queue-cell queue-proposed" title={file.proposed || ''}>
-                                        {file.proposed || 'Unable to generate path'}
+                                    <div
+                                        className="queue-cell queue-proposed"
+                                        title={file.proposed || ""}
+                                    >
+                                        {file.proposed || "Unable to generate path"}
                                     </div>
 
                                     {/* Actions */}
                                     <div className="queue-cell queue-actions">
                                         {isFileProcessing ? (
                                             <span className="queue-status processing">
-                                                <Loader2 size={14} className="processing" aria-hidden="true" />
+                                                <Loader2
+                                                    size={14}
+                                                    className="processing"
+                                                    aria-hidden="true"
+                                                />
                                                 <span>{Math.round(progress[index] || 0)}%</span>
                                             </span>
                                         ) : status !== FileStatus.Secured ? (

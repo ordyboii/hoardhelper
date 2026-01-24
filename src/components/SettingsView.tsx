@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Server, Folder, Link, User, Key, Zap, ExternalLink, Clock } from 'lucide-react';
-import { Settings, ExportResult, RealDebridConnectionResult } from '../types';
+import React, { useState, useEffect } from "react";
+import { Save, Server, Folder, Link, User, Key, Zap, ExternalLink, Clock } from "lucide-react";
+import { Settings, ExportResult, RealDebridConnectionResult } from "../types";
 import {
     clampCheckInterval,
     MIN_CHECK_INTERVAL,
     MAX_CHECK_INTERVAL,
     DEFAULT_CHECK_INTERVAL
-} from '../logic/connectionMonitoring';
+} from "../logic/connectionMonitoring";
 
 interface SettingsViewProps {
     initialSettings: Settings;
@@ -52,17 +52,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             // Nextcloud status
             if (nextcloudResult.success) {
-                messages.push('Nextcloud: Connected');
+                messages.push("Nextcloud: Connected");
             } else {
-                messages.push(`Nextcloud: Failed - ${nextcloudResult.error || 'Unknown error'}`);
+                messages.push(`Nextcloud: Failed - ${nextcloudResult.error || "Unknown error"}`);
             }
 
             // Real-Debrid status - using guard clauses to reduce nesting
             if (!settings.realDebridApiKey) {
-                messages.push('Real-Debrid: Not configured');
+                messages.push("Real-Debrid: Not configured");
             } else if (!realDebridResult || !realDebridResult.success) {
                 // Handle null or failed connection
-                const errorMsg = realDebridResult?.error || 'Unknown error';
+                const errorMsg = realDebridResult?.error || "Unknown error";
                 messages.push(`Real-Debrid: Failed - ${errorMsg}`);
             } else {
                 // realDebridResult is guaranteed non-null and successful here
@@ -73,7 +73,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 messages.push(rdMessage);
             }
 
-            alert(messages.join('\n\n'));
+            alert(messages.join("\n\n"));
         } finally {
             setIsTesting(false);
         }
@@ -133,7 +133,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     className="input-field"
                                     type="text"
                                     value={settings.username}
-                                    onChange={(e) => setSettings({ ...settings, username: e.target.value })}
+                                    onChange={(e) =>
+                                        setSettings({ ...settings, username: e.target.value })
+                                    }
                                     placeholder="your-username"
                                 />
                             </div>
@@ -148,7 +150,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     className="input-field"
                                     type="password"
                                     value={settings.password}
-                                    onChange={(e) => setSettings({ ...settings, password: e.target.value })}
+                                    onChange={(e) =>
+                                        setSettings({ ...settings, password: e.target.value })
+                                    }
                                     placeholder="••••••••"
                                 />
                             </div>
@@ -174,7 +178,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 className="input-field"
                                 type="text"
                                 value={settings.targetFolderTv}
-                                onChange={(e) => setSettings({ ...settings, targetFolderTv: e.target.value })}
+                                onChange={(e) =>
+                                    setSettings({ ...settings, targetFolderTv: e.target.value })
+                                }
                                 placeholder="/TV Shows"
                             />
                         </div>
@@ -188,7 +194,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 className="input-field"
                                 type="text"
                                 value={settings.targetFolderMovie}
-                                onChange={(e) => setSettings({ ...settings, targetFolderMovie: e.target.value })}
+                                onChange={(e) =>
+                                    setSettings({ ...settings, targetFolderMovie: e.target.value })
+                                }
                                 placeholder="/Movies"
                             />
                             <p className="settings-hint">
@@ -216,8 +224,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 id="realDebridApiKey"
                                 className="input-field"
                                 type="password"
-                                value={settings.realDebridApiKey || ''}
-                                onChange={(e) => setSettings({ ...settings, realDebridApiKey: e.target.value })}
+                                value={settings.realDebridApiKey || ""}
+                                onChange={(e) =>
+                                    setSettings({ ...settings, realDebridApiKey: e.target.value })
+                                }
                                 placeholder="••••••••••••••••"
                             />
                             <a
@@ -257,28 +267,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 onChange={handleIntervalChange}
                             />
                             <p className="settings-hint">
-                                How often to check connection status ({MIN_CHECK_INTERVAL}-{MAX_CHECK_INTERVAL} seconds). Checks pause when app is minimized.
+                                How often to check connection status ({MIN_CHECK_INTERVAL}-
+                                {MAX_CHECK_INTERVAL} seconds). Checks pause when app is minimized.
                             </p>
                         </div>
                     </div>
                 </div>
 
                 <div className="settings-actions">
-                    <button
-                        className="btn-secondary"
-                        onClick={handleTest}
-                        disabled={isTesting}
-                    >
+                    <button className="btn-secondary" onClick={handleTest} disabled={isTesting}>
                         <Server size={18} />
-                        {isTesting ? 'Testing...' : 'Test Connection'}
+                        {isTesting ? "Testing..." : "Test Connection"}
                     </button>
                     <button
-                        className={isSaved ? 'btn-primary' : 'btn-primary'}
+                        className={isSaved ? "btn-primary" : "btn-primary"}
                         onClick={handleSave}
-                        style={isSaved ? { background: 'var(--success)', color: 'var(--bg-primary)' } : undefined}
+                        style={
+                            isSaved
+                                ? { background: "var(--success)", color: "var(--bg-primary)" }
+                                : undefined
+                        }
                     >
                         <Save size={18} />
-                        {isSaved ? 'Saved Successfully' : 'Save Configuration'}
+                        {isSaved ? "Saved Successfully" : "Save Configuration"}
                     </button>
                 </div>
             </div>

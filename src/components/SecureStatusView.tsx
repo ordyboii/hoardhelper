@@ -1,6 +1,6 @@
-import React from 'react';
-import { HardDrive, ShieldCheck, XCircle, RotateCcw } from 'lucide-react';
-import { HistoryItem } from '../types';
+import React from "react";
+import { HardDrive, ShieldCheck, XCircle, RotateCcw } from "lucide-react";
+import { HistoryItem } from "../types";
 
 interface SecureStatusViewProps {
     history: HistoryItem[];
@@ -10,18 +10,18 @@ interface SecureStatusViewProps {
 export const SecureStatusView: React.FC<SecureStatusViewProps> = ({ history, onRetry }) => {
     // Calculate totals
     // Total processed = unique files (not counting retries as separate)
-    const totalProcessed = history.filter(h => !h.isRetry).length;
+    const totalProcessed = history.filter((h) => !h.isRetry).length;
     // Success count = all successful uploads (including successful retries)
-    const successCount = history.filter(h => h.uploadStatus === 'success').length;
+    const successCount = history.filter((h) => h.uploadStatus === "success").length;
 
     // Format date for display
     const formatDate = (date: Date) => {
         const d = new Date(date);
         return d.toLocaleDateString(undefined, {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
         });
     };
 
@@ -42,11 +42,10 @@ export const SecureStatusView: React.FC<SecureStatusViewProps> = ({ history, onR
                 </div>
                 <p className="history-stat-hint">
                     {totalProcessed === 0
-                        ? 'No files processed yet'
+                        ? "No files processed yet"
                         : successCount === totalProcessed
-                            ? 'All files secured successfully!'
-                            : `${totalProcessed - successCount} file${totalProcessed - successCount !== 1 ? 's' : ''} need attention`
-                    }
+                          ? "All files secured successfully!"
+                          : `${totalProcessed - successCount} file${totalProcessed - successCount !== 1 ? "s" : ""} need attention`}
                 </p>
             </div>
 
@@ -59,23 +58,31 @@ export const SecureStatusView: React.FC<SecureStatusViewProps> = ({ history, onR
 
                 <div className="activity-list">
                     {history.length === 0 ? (
-                        <p className="activity-empty">No files processed yet. Add files in Loot and secure them.</p>
+                        <p className="activity-empty">
+                            No files processed yet. Add files in Loot and secure them.
+                        </p>
                     ) : (
                         history.map((item) => (
                             <div
                                 key={item.id}
-                                className={`history-item ${item.uploadStatus === 'failed' ? 'failed' : ''}`}
+                                className={`history-item ${item.uploadStatus === "failed" ? "failed" : ""}`}
                             >
                                 <div className="history-item-main">
                                     {/* Status Icon */}
-                                    {item.uploadStatus === 'success' ? (
+                                    {item.uploadStatus === "success" ? (
                                         <>
-                                            <ShieldCheck className="history-icon success" aria-hidden="true" />
+                                            <ShieldCheck
+                                                className="history-icon success"
+                                                aria-hidden="true"
+                                            />
                                             <span className="sr-only">Upload successful</span>
                                         </>
                                     ) : (
                                         <>
-                                            <XCircle className="history-icon error" aria-hidden="true" />
+                                            <XCircle
+                                                className="history-icon error"
+                                                aria-hidden="true"
+                                            />
                                             <span className="sr-only">Upload failed</span>
                                         </>
                                     )}
@@ -89,9 +96,10 @@ export const SecureStatusView: React.FC<SecureStatusViewProps> = ({ history, onR
                                             )}
                                         </div>
                                         <div className="history-item-path">
-                                            {item.type === 'tv' ? '/TV Shows/' : '/Movies/'}{item.series}/
+                                            {item.type === "tv" ? "/TV Shows/" : "/Movies/"}
+                                            {item.series}/
                                         </div>
-                                        {item.uploadStatus === 'failed' && item.errorMessage && (
+                                        {item.uploadStatus === "failed" && item.errorMessage && (
                                             <div className="history-item-error">
                                                 {item.errorMessage}
                                             </div>
@@ -105,7 +113,7 @@ export const SecureStatusView: React.FC<SecureStatusViewProps> = ({ history, onR
                                     </div>
 
                                     {/* Retry Button for Failed Items */}
-                                    {item.uploadStatus === 'failed' && (
+                                    {item.uploadStatus === "failed" && (
                                         <button
                                             className="retry-btn"
                                             onClick={() => onRetry(item)}

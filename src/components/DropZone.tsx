@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { UploadCloud, FileVideo, HardDrive, AlertCircle, Trash2 } from 'lucide-react';
+import React, { useRef, useState } from "react";
+import { UploadCloud, FileVideo, HardDrive, AlertCircle, Trash2 } from "lucide-react";
 
 interface DropZoneProps {
     onFilesDropped: (files: File[]) => void;
@@ -7,11 +7,7 @@ interface DropZoneProps {
     onClear?: () => void;
 }
 
-export const DropZone: React.FC<DropZoneProps> = ({
-    onFilesDropped,
-    fileCount = 0,
-    onClear
-}) => {
+export const DropZone: React.FC<DropZoneProps> = ({ onFilesDropped, fileCount = 0, onClear }) => {
     const [isHovering, setIsHovering] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,13 +49,15 @@ export const DropZone: React.FC<DropZoneProps> = ({
                 <div className="view-header-row">
                     <div>
                         <h2 className="view-title">Loot Inventory</h2>
-                        <p className="view-description">Add treasures to your hoard for processing.</p>
+                        <p className="view-description">
+                            Add treasures to your hoard for processing.
+                        </p>
                     </div>
                     {fileCount > 0 && onClear && (
                         <button
                             className="btn-secondary"
                             onClick={onClear}
-                            style={{ width: 'auto' }}
+                            style={{ width: "auto" }}
                         >
                             <Trash2 size={18} />
                             Clear All
@@ -69,7 +67,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
             </header>
 
             <div
-                className={`drop-zone-area ${isHovering ? 'active' : ''}`}
+                className={`drop-zone-area ${isHovering ? "active" : ""}`}
                 onClick={handleClick}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -77,7 +75,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         handleClick();
                     }
@@ -90,7 +88,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
                     type="file"
                     multiple
                     ref={fileInputRef}
-                    style={{ display: 'none' }}
+                    style={{ display: "none" }}
                     onChange={handleFileSelect}
                     accept=".mkv,.mp4,.avi,.mov"
                 />
@@ -101,10 +99,11 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
                 <div className="drop-zone-content">
                     <h3 className="drop-zone-title">
-                        {isHovering ? 'Release to add files' : 'Drag & Drop treasures here'}
+                        {isHovering ? "Release to add files" : "Drag & Drop treasures here"}
                     </h3>
                     <p className="drop-zone-subtitle">
-                        Supports <code>.mkv</code>, <code>.mp4</code>, <code>.avi</code>. Files will be automatically analyzed.
+                        Supports <code>.mkv</code>, <code>.mp4</code>, <code>.avi</code>. Files will
+                        be automatically analyzed.
                     </p>
                 </div>
             </div>
@@ -112,7 +111,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
             <div className="drop-zone-stats">
                 <div className="card drop-zone-stat">
                     <div className="drop-zone-stat-icon">
-                        <FileVideo style={{ color: 'var(--gold-primary)' }} />
+                        <FileVideo style={{ color: "var(--gold-primary)" }} />
                     </div>
                     <div className="drop-zone-stat-info">
                         <div className="drop-zone-stat-value">{fileCount}</div>
@@ -122,7 +121,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
                 <div className="card drop-zone-stat">
                     <div className="drop-zone-stat-icon">
-                        <HardDrive style={{ color: 'var(--info)' }} />
+                        <HardDrive style={{ color: "var(--info)" }} />
                     </div>
                     <div className="drop-zone-stat-info">
                         <div className="drop-zone-stat-value">
@@ -134,7 +133,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
                 <div className="card drop-zone-stat">
                     <div className="drop-zone-stat-icon">
-                        <AlertCircle style={{ color: 'var(--warning)' }} />
+                        <AlertCircle style={{ color: "var(--warning)" }} />
                     </div>
                     <div className="drop-zone-stat-info">
                         <div className="drop-zone-stat-value">0</div>

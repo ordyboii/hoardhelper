@@ -1,7 +1,7 @@
-import { z } from 'zod';
-import { RealDebridConnectionResult } from '../types/index.js';
+import { z } from "zod";
+import { RealDebridConnectionResult } from "../types/index.js";
 
-const REALDEBRID_API_BASE = 'https://api.real-debrid.com/rest/1.0';
+const REALDEBRID_API_BASE = "https://api.real-debrid.com/rest/1.0";
 
 /**
  * Zod schema for Real-Debrid /user API response
@@ -24,7 +24,7 @@ const RealDebridUserResponseSchema = z.object({
 /**
  * TypeScript type inferred from Zod schema
  */
-type RealDebridUserResponse = z.infer<typeof RealDebridUserResponseSchema>;
+type _RealDebridUserResponse = z.infer<typeof RealDebridUserResponseSchema>;
 
 /**
  * RealDebridClient encapsulates the API key and provides methods for Real-Debrid API interactions.
@@ -45,7 +45,7 @@ class RealDebridClient {
         return fetch(url, {
             ...options,
             headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
+                Authorization: `Bearer ${this.apiKey}`,
                 ...options?.headers
             }
         });
@@ -56,13 +56,16 @@ class RealDebridClient {
      */
     async testConnection(): Promise<RealDebridConnectionResult> {
         try {
-            const response = await this.request('/user');
+            const response = await this.request("/user");
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    return { success: false, error: 'Invalid API token' };
+                    return { success: false, error: "Invalid API token" };
                 }
-                return { success: false, error: `API error: ${response.status} ${response.statusText}` };
+                return {
+                    success: false,
+                    error: `API error: ${response.status} ${response.statusText}`
+                };
             }
 
             const rawData = await response.json();
@@ -71,13 +74,13 @@ class RealDebridClient {
             const parseResult = RealDebridUserResponseSchema.safeParse(rawData);
 
             if (!parseResult.success) {
-                console.error('[RealDebrid] Invalid API response structure:', {
+                console.error("[RealDebrid] Invalid API response structure:", {
                     data: rawData,
                     errors: parseResult.error.issues
                 });
                 return {
                     success: false,
-                    error: `Invalid API response: ${parseResult.error.issues[0]?.message || 'Unknown validation error'}`
+                    error: `Invalid API response: ${parseResult.error.issues[0]?.message || "Unknown validation error"}`
                 };
             }
 
@@ -90,14 +93,17 @@ class RealDebridClient {
                     const expDate = new Date(userData.expiration);
                     // Validate that the date is valid (Zod validates ISO format, but we still check)
                     if (!isNaN(expDate.getTime())) {
-                        expirationDisplay = expDate.toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
+                        expirationDisplay = expDate.toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric"
                         });
                     }
-                } catch (dateError) {
-                    console.warn('[RealDebrid] Failed to parse expiration date:', userData.expiration);
+                } catch (_dateError) {
+                    console.warn(
+                        "[RealDebrid] Failed to parse expiration date:",
+                        userData.expiration
+                    );
                     // Continue without expiration display
                 }
             }
@@ -108,8 +114,8 @@ class RealDebridClient {
                 expiration: expirationDisplay
             };
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Connection failed';
-            console.error('[RealDebrid] Connection test failed:', error);
+            const errorMessage = error instanceof Error ? error.message : "Connection failed";
+            console.error("[RealDebrid] Connection test failed:", error);
             return { success: false, error: errorMessage };
         }
     }
@@ -139,7 +145,7 @@ export async function testRealDebridConnection(key?: string): Promise<RealDebrid
     }
 
     if (!clientToTest) {
-        return { success: false, error: 'No API key provided' };
+        return { success: false, error: "No API key provided" };
     }
 
     return clientToTest.testConnection();
