@@ -9,6 +9,11 @@ interface SettingsViewProps {
     onTestRealDebrid: (apiKey: string) => Promise<RealDebridConnectionResult>;
 }
 
+// Connection check interval constraints
+const MIN_CHECK_INTERVAL = 30;  // seconds
+const MAX_CHECK_INTERVAL = 300; // seconds
+const DEFAULT_CHECK_INTERVAL = 60; // seconds
+
 export const SettingsView: React.FC<SettingsViewProps> = ({
     initialSettings,
     onSave,
@@ -53,14 +58,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             // Real-Debrid status
             if (settings.realDebridApiKey) {
-                if (realDebridResult?.success) {
+                // Explicit null check for proper type narrowing
+                if (realDebridResult && realDebridResult.success) {
                     let rdMessage = `Real-Debrid: Connected as ${realDebridResult.username}`;
                     if (realDebridResult.expiration) {
                         rdMessage += ` (expires: ${realDebridResult.expiration})`;
                     }
                     messages.push(rdMessage);
                 } else {
-                    messages.push(`Real-Debrid: Failed - ${realDebridResult?.error || 'Unknown error'}`);
+                    // realDebridResult could be null or have success=false
+                    const errorMsg = realDebridResult?.error || 'Unknown error';
+                    messages.push(`Real-Debrid: Failed - ${errorMsg}`);
                 }
             } else {
                 messages.push('Real-Debrid: Not configured');
@@ -70,6 +78,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         } finally {
             setIsTesting(false);
         }
+    };
+
+    /**
+     * Handles changes to the connection check interval input.
+     * Validates and clamps the value between MIN_CHECK_INTERVAL and MAX_CHECK_INTERVAL.
+     */
+    const handleIntervalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value, 10);
+        const clampedValue = isNaN(value)
+            ? DEFAULT_CHECK_INTERVAL
+            : Math.max(MIN_CHECK_INTERVAL, Math.min(MAX_CHECK_INTERVAL, value));
+
+        setSettings({ ...settings, connectionCheckInterval: clampedValue });
     };
 
     return (
@@ -233,13 +254,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 id="connectionCheckInterval"
                                 className="input-field"
                                 type="number"
-                                min={30}
-                                max={300}
-                                value={settings.connectionCheckInterval ?? 60}
-                                onChange={(e) => setSettings({ ...settings, connectionCheckInterval: Math.max(30, Math.min(300, parseInt(e.target.value) || 60)) })}
+                                min={MIN_CHECK_INTERVAL}
+                                max={MAX_CHECK_INTERVAL}
+                                value={settings.connectionCheckInterval ?? DEFAULT_CHECK_INTERVAL}
+                                onChange={handleIntervalChange}
                             />
                             <p className="settings-hint">
-                                How often to check connection status (30-300 seconds). Checks pause when app is minimized.
+                                How often to check connection status ({MIN_CHECK_INTERVAL}-{MAX_CHECK_INTERVAL} seconds). Checks pause when app is minimized.
                             </p>
                         </div>
                     </div>
