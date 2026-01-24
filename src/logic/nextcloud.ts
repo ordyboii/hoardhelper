@@ -62,13 +62,13 @@ export async function testConnection(
 
   // Try to list the root directory with timeout
   const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error("Connection timeout after 10 seconds")), 10000)
+    setTimeout(
+      () => reject(new Error("Connection timeout after 10 seconds")),
+      10000,
+    ),
   );
 
-  await Promise.race([
-    clientToTest.getDirectoryContents("/"),
-    timeoutPromise,
-  ]);
+  await Promise.race([clientToTest.getDirectoryContents("/"), timeoutPromise]);
   return true;
 }
 
