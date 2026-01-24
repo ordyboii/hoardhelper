@@ -38,7 +38,7 @@ export function initializeClient(
     username: username,
     password: password,
     maxBodyLength: 10 * 1024 * 1024 * 1024, // 10GB limit
-    timeout: 30000, // 30 second timeout
+    timeout: 10000, // 10 second timeout
   });
   return true;
 }
@@ -55,7 +55,7 @@ export async function testConnection(
       username: username,
       password: password,
       maxBodyLength: 10 * 1024 * 1024 * 1024,
-      timeout: 30000, // 30 second timeout
+      timeout: 10000, // 10 second timeout
     });
   }
 

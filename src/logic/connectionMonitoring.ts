@@ -15,13 +15,13 @@ export const DEFAULT_CHECK_INTERVAL = 60;
  * @returns Clamped interval value between MIN_CHECK_INTERVAL and MAX_CHECK_INTERVAL
  */
 export function clampCheckInterval(value: number): number {
-    // Guard: Return default for invalid numbers
-    if (isNaN(value) || !isFinite(value)) {
-        return DEFAULT_CHECK_INTERVAL;
-    }
+  // Guard: Return default for invalid numbers
+  if (isNaN(value) || !isFinite(value)) {
+    return DEFAULT_CHECK_INTERVAL;
+  }
 
-    // Clamp to valid range
-    return Math.max(MIN_CHECK_INTERVAL, Math.min(MAX_CHECK_INTERVAL, value));
+  // Clamp to valid range
+  return Math.max(MIN_CHECK_INTERVAL, Math.min(MAX_CHECK_INTERVAL, value));
 }
 
 /**
@@ -31,7 +31,7 @@ export function clampCheckInterval(value: number): number {
  * @returns Seconds value
  */
 export function msToSeconds(ms: number): number {
-    return Math.floor(ms / 1000);
+  return Math.floor(ms / 1000);
 }
 
 /**
@@ -41,7 +41,7 @@ export function msToSeconds(ms: number): number {
  * @returns Milliseconds value
  */
 export function secondsToMs(seconds: number): number {
-    return seconds * 1000;
+  return seconds * 1000;
 }
 
 /**
@@ -51,6 +51,8 @@ export function secondsToMs(seconds: number): number {
  * @param visibilityState - The document.visibilityState value
  * @returns true if checks should run, false if paused
  */
-export function shouldRunConnectionCheck(visibilityState: DocumentVisibilityState): boolean {
-    return visibilityState === "visible";
+export function shouldRunConnectionCheck(
+  visibilityState: DocumentVisibilityState,
+): boolean {
+  return visibilityState === "visible";
 }
