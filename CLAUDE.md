@@ -37,6 +37,8 @@ Drop files → Parse filenames (parser.ts) → Generate paths (exporter.ts)
 | Parser | `src/logic/parser.ts` | Filename parsing, sanitization, pattern detection (SxxExx, NxNN, anime) |
 | Exporter | `src/logic/exporter.ts` | Path generation for TV series and movies |
 | Nextcloud | `src/logic/nextcloud.ts` | WebDAV client, upload with progress, directory creation |
+| Real-Debrid | `src/logic/realdebrid.ts` | Real-Debrid API client for connection testing |
+| Secure Storage | `src/logic/secureStorage.ts` | OS-level credential encryption (passwords, API keys) |
 | State | `src/App.tsx` | Central state management via React Context |
 
 ### Component Structure
@@ -49,11 +51,12 @@ Drop files → Parse filenames (parser.ts) → Generate paths (exporter.ts)
 
 ## Testing
 
-Tests are in `test/verify.ts` using Node.js native test runner:
-- Parser tests: TV show patterns, movie detection, edge cases
-- Security tests: Path traversal prevention, null bytes, illegal characters
+Tests use Node.js native test runner with coverage reporting:
+- `test/verify.ts`: Parser tests (TV show patterns, movie detection, edge cases) and security tests (path traversal, null bytes, illegal characters)
+- `test/secureStorage.test.ts`: Encryption/decryption, storage format, legacy migration
 
 Run single test file: `node --import tsx --test test/verify.ts`
+Run all tests with coverage: `npm test`
 
 ## Development Workflow
 
@@ -75,3 +78,10 @@ The parser and exporter modules are security-critical:
 - Path traversal prevention removes `..` sequences
 - WebDAV uploads enforce HTTPS (except localhost)
 - Test suite includes malicious input cases
+
+### Credential Storage
+- **Encryption**: Passwords and API keys are encrypted using Electron's `safeStorage` API
+- **OS Integration**: Uses platform-specific secure storage (Keychain on macOS, DPAPI on Windows, libsecret on Linux)
+- **Storage Format**: Sensitive fields (`password`, `realDebridApiKey`) stored as `field_encrypted` with base64-encoded encrypted data
+- **Migration**: Automatically migrates from legacy unencrypted format on first save
+- **Documentation**: See `docs/secure-storage.md` for implementation details

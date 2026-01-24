@@ -6,7 +6,8 @@ import { parseFilename } from './logic/parser.js';
 import { generateNewPath } from './logic/exporter.js';
 import { initializeClient, testConnection, uploadFileToNextcloud } from './logic/nextcloud.js';
 import { initializeRealDebrid, testRealDebridConnection } from './logic/realdebrid.js';
-import type { Settings, FileMetadata, ExportResult } from './types/index.js';
+import { encryptString, decryptString, isEncryptionAvailable } from './logic/secureStorage.js';
+import type { Settings, StoredSettings, FileMetadata, ExportResult } from './types/index.js';
 
 // Workaround for __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -15,6 +16,80 @@ const __dirname = path.dirname(__filename);
 // Initialize Store with specific types if needed, or cast later
 const store = new Store() as any;
 let mainWindow: BrowserWindow | null = null;
+
+/**
+ * Converts plain Settings to StoredSettings with encrypted sensitive fields
+ */
+function encryptSettings(settings: Settings): StoredSettings {
+    const stored: StoredSettings = {
+        url: settings.url,
+        targetFolderTv: settings.targetFolderTv,
+        targetFolderMovie: settings.targetFolderMovie,
+        username: settings.username,
+        connectionCheckInterval: settings.connectionCheckInterval,
+        _encrypted: true
+    };
+
+    // Encrypt password
+    if (settings.password) {
+        stored.password_encrypted = encryptString(settings.password);
+    }
+
+    // Encrypt Real-Debrid API key
+    if (settings.realDebridApiKey) {
+        stored.realDebridApiKey_encrypted = encryptString(settings.realDebridApiKey);
+    }
+
+    // Keep deprecated field if it exists
+    if (settings.targetFolder) {
+        stored.targetFolder = settings.targetFolder;
+    }
+
+    return stored;
+}
+
+/**
+ * Converts StoredSettings to plain Settings by decrypting sensitive fields.
+ * Handles migration from old unencrypted format.
+ */
+function decryptSettings(stored: StoredSettings): Settings {
+    const settings: Settings = {
+        url: stored.url || '',
+        targetFolderTv: stored.targetFolderTv || '',
+        targetFolderMovie: stored.targetFolderMovie || '',
+        username: stored.username || '',
+        password: '',
+        connectionCheckInterval: stored.connectionCheckInterval
+    };
+
+    // Migration: If old unencrypted data exists, use it and re-encrypt on next save
+    if (!stored._encrypted) {
+        console.log('[SecureStorage] Migrating from unencrypted storage format');
+        // Cast to any to access old plain-text fields
+        const legacy = stored as any;
+        settings.password = legacy.password || '';
+        settings.realDebridApiKey = legacy.realDebridApiKey;
+    } else {
+        // Decrypt password
+        if (stored.password_encrypted) {
+            const decrypted = decryptString(stored.password_encrypted);
+            settings.password = decrypted || '';
+        }
+
+        // Decrypt Real-Debrid API key
+        if (stored.realDebridApiKey_encrypted) {
+            const decrypted = decryptString(stored.realDebridApiKey_encrypted);
+            settings.realDebridApiKey = decrypted || undefined;
+        }
+    }
+
+    // Keep deprecated field if it exists
+    if (stored.targetFolder) {
+        settings.targetFolder = stored.targetFolder;
+    }
+
+    return settings;
+}
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -40,8 +115,9 @@ app.whenReady().then(() => {
     createWindow();
 
     // Auto-initialize Nextcloud if settings exist
-    const settings = store.get('nextcloud') as Settings | undefined;
-    if (settings) {
+    const stored = store.get('nextcloud') as StoredSettings | undefined;
+    if (stored) {
+        const settings = decryptSettings(stored);
         initializeClient(settings.url, settings.username, settings.password);
         // Initialize Real-Debrid if API key exists
         if (settings.realDebridApiKey) {
@@ -71,16 +147,31 @@ ipcMain.on('console-log', (event, msg) => {
 
 // Settings Handlers
 ipcMain.handle('get-settings', () => {
-    return store.get('nextcloud') || {};
+    const stored = store.get('nextcloud') as StoredSettings | undefined;
+    if (!stored) {
+        return {};
+    }
+    return decryptSettings(stored);
 });
 
 ipcMain.handle('save-settings', (event, settings: Settings) => {
-    store.set('nextcloud', settings);
+    // Log encryption status on first save
+    if (!store.has('nextcloud')) {
+        console.log(`[SecureStorage] Encryption available: ${isEncryptionAvailable()}`);
+    }
+
+    // Encrypt sensitive fields before storing
+    const storedSettings = encryptSettings(settings);
+    store.set('nextcloud', storedSettings);
+
+    // Initialize clients with decrypted credentials
     const success = initializeClient(settings.url, settings.username, settings.password);
+
     // Initialize Real-Debrid if API key is present
     if (settings.realDebridApiKey) {
         initializeRealDebrid(settings.realDebridApiKey);
     }
+
     return success;
 });
 
@@ -105,7 +196,10 @@ ipcMain.handle('test-realdebrid-connection', async (event, apiKey?: string) => {
 ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
     let settings: Settings | undefined;
     try {
-        settings = store.get('nextcloud') as Settings | undefined;
+        const stored = store.get('nextcloud') as StoredSettings | undefined;
+        if (stored) {
+            settings = decryptSettings(stored);
+        }
     } catch (e) {
         console.error('[Main] Failed to read settings:', e);
     }
@@ -176,7 +270,8 @@ ipcMain.handle('parse-files', async (event, filePaths: string[]) => {
 
 // 2. Generate Path (Helper for Edit Mode)
 ipcMain.handle('generate-path', (event, metadata: FileMetadata) => {
-    const settings = store.get('nextcloud') as Settings | undefined;
+    const stored = store.get('nextcloud') as StoredSettings | undefined;
+    const settings = stored ? decryptSettings(stored) : undefined;
 
     let proposedPath = generateNewPath(metadata);
 
@@ -203,7 +298,8 @@ ipcMain.handle('generate-path', (event, metadata: FileMetadata) => {
 
 // 3. Export/Upload Files
 ipcMain.handle('export-files', async (event, filesToExport: FileMetadata[]) => {
-    const settings = store.get('nextcloud') as Settings | undefined;
+    const stored = store.get('nextcloud') as StoredSettings | undefined;
+    const settings = stored ? decryptSettings(stored) : undefined;
     const results: ExportResult[] = [];
 
     console.log(`[Main] Exporting (Upload) ${filesToExport.length} files.`);

@@ -52,6 +52,25 @@ export interface Settings {
     connectionCheckInterval?: number; // in seconds, default 60
 }
 
+/**
+ * Settings as stored on disk with sensitive fields encrypted.
+ * Sensitive fields (password, realDebridApiKey) are encrypted using Electron's safeStorage API.
+ */
+export interface StoredSettings {
+    url: string;
+    targetFolder?: string;
+    targetFolderTv: string;
+    targetFolderMovie: string;
+    username: string;
+    /** Encrypted password (base64-encoded encrypted buffer) */
+    password_encrypted?: string;
+    /** Encrypted Real-Debrid API key (base64-encoded encrypted buffer) */
+    realDebridApiKey_encrypted?: string;
+    connectionCheckInterval?: number;
+    /** Flag to indicate if encryption is being used */
+    _encrypted?: boolean;
+}
+
 export interface RealDebridConnectionResult {
     success: boolean;
     expiration?: string;
