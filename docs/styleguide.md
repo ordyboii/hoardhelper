@@ -292,3 +292,259 @@ Use `.sr-only` class to provide text for screen readers that is visually hidden:
 - **Commit Messages:** Use conventional commits format. `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`.
 - **PRs:** Reference User Story IDs in PR descriptions to maintain traceability. The following format for a PR title `US-XXX: Title` and a brief description from the acceptance criteria of the story. Use the Github CLI to open the PR.
 - **Branch Naming:** Use short, descriptive names without prefixes. Example: `ui-refactor`, `toast-notifications`. Keep names concise and lowercase with hyphens.
+
+### Control Flow Patterns
+
+**Goal:** Maintain shallow nesting (maximum 1-2 levels) for better readability and maintainability.
+
+#### Guard Clauses (Preferred)
+
+Use guard clauses to handle edge cases early and reduce nesting. The "happy path" should be at the end of the function with minimal indentation.
+
+**❌ Avoid: Deep Nesting**
+```typescript
+function processFile(file: FileMetadata, settings: Settings) {
+    if (file.valid) {                                    // Level 1
+        if (settings.url) {                               // Level 2
+            if (settings.username && settings.password) { // Level 3 ❌
+                // Happy path buried 3 levels deep
+                return uploadFile(file, settings);
+            }
+        }
+    }
+    return null;
+}
+```
+
+**✅ Prefer: Guard Clauses**
+```typescript
+function processFile(file: FileMetadata, settings: Settings) {
+    // Guard: Handle invalid file
+    if (!file.valid) {
+        return null;
+    }
+
+    // Guard: Handle missing URL
+    if (!settings.url) {
+        return null;
+    }
+
+    // Guard: Handle missing credentials
+    if (!settings.username || !settings.password) {
+        return null;
+    }
+
+    // Happy path at top level - easy to find and read
+    return uploadFile(file, settings);
+}
+```
+
+#### Extract Helper Functions
+
+When nesting is unavoidable, extract nested logic into well-named helper functions.
+
+**❌ Avoid: Duplicated Nested Logic**
+```typescript
+// Handler 1
+ipcMain.handle('parse-files', () => {
+    if (proposedPath) {
+        if (metadata.type === 'tv') {
+            targetBase = settings?.targetFolderTv || '';
+        } else {
+            targetBase = settings?.targetFolderMovie || '';
+        }
+        if (targetBase) {
+            // ... 10 more lines of logic
+        }
+    }
+});
+
+// Handler 2 - IDENTICAL NESTED LOGIC
+ipcMain.handle('generate-path', () => {
+    if (proposedPath) {
+        if (metadata.type === 'tv') {
+            // ... same 15 lines duplicated
+        }
+    }
+});
+```
+
+**✅ Prefer: Helper Function with Guard Clauses**
+```typescript
+function prependTargetBasePath(
+    metadata: ParseResult,
+    proposedPath: string | null,
+    settings: Settings | undefined
+): string | null {
+    // Guard: No path to modify
+    if (!proposedPath) return proposedPath;
+
+    // Determine target based on type
+    const targetBase = metadata.type === 'tv'
+        ? settings?.targetFolderTv || settings?.targetFolder || ''
+        : settings?.targetFolderMovie || settings?.targetFolder || '';
+
+    // Guard: No target configured
+    if (!targetBase) return proposedPath;
+
+    // Process path (single level of logic)
+    const safeBase = targetBase.replace(/\.\./g, '');
+    const base = safeBase.replace(/\/$/, '');
+    const rel = proposedPath.replace(/^\//, '');
+    return `${base}/${rel}`;
+}
+
+// Both handlers now use the helper (DRY principle)
+ipcMain.handle('parse-files', () => {
+    const proposedPath = prependTargetBasePath(metadata, basePath, settings);
+});
+
+ipcMain.handle('generate-path', () => {
+    const proposedPath = prependTargetBasePath(metadata, basePath, settings);
+});
+```
+
+#### Early Returns in Conditionals
+
+Use early returns instead of else blocks to reduce indentation.
+
+**❌ Avoid: Else Blocks**
+```typescript
+function decryptSettings(stored: StoredSettings): Settings {
+    if (!stored._encrypted) {
+        // Migration logic
+        settings.password = legacy.password;
+        return settings;
+    } else {                                    // Unnecessary else
+        if (stored.password_encrypted) {         // Nested in else
+            settings.password = decrypt(...);
+        }
+        if (stored.apiKey_encrypted) {
+            settings.apiKey = decrypt(...);
+        }
+        return settings;
+    }
+}
+```
+
+**✅ Prefer: Early Return**
+```typescript
+function decryptSettings(stored: StoredSettings): Settings {
+    // Migration: Handle legacy format and exit early
+    if (!stored._encrypted) {
+        settings.password = legacy.password;
+        return settings;  // Early exit eliminates else block
+    }
+
+    // Modern encrypted format (now at top level)
+    if (stored.password_encrypted) {
+        settings.password = decrypt(stored.password_encrypted);
+    }
+
+    if (stored.apiKey_encrypted) {
+        settings.apiKey = decrypt(stored.apiKey_encrypted);
+    }
+
+    return settings;
+}
+```
+
+#### Avoid Deeply Nested Ternaries
+
+Complex nested ternaries in JSX reduce readability. Extract to helper functions.
+
+**❌ Avoid: Nested Ternaries**
+```tsx
+<div>
+    {totalProcessed === 0
+        ? 'No files processed yet'
+        : successCount === totalProcessed
+            ? 'All files secured successfully!'
+            : `${totalProcessed - successCount} file${totalProcessed - successCount !== 1 ? 's' : ''} need attention`
+    }
+</div>
+```
+
+**✅ Prefer: Helper Function**
+```tsx
+function getProcessingMessage(totalProcessed: number, successCount: number): string {
+    if (totalProcessed === 0) {
+        return 'No files processed yet';
+    }
+
+    if (successCount === totalProcessed) {
+        return 'All files secured successfully!';
+    }
+
+    const failedCount = totalProcessed - successCount;
+    const plural = failedCount !== 1 ? 's' : '';
+    return `${failedCount} file${plural} need attention`;
+}
+
+// Usage in JSX
+<div>{getProcessingMessage(totalProcessed, successCount)}</div>
+```
+
+#### Type Narrowing with Guard Clauses
+
+Use explicit null checks instead of optional chaining for proper TypeScript type narrowing.
+
+**❌ Avoid: Optional Chaining Without Narrowing**
+```typescript
+if (realDebridResult?.success) {
+    // TypeScript still thinks realDebridResult could be null
+    const username = realDebridResult.username;  // Type error!
+}
+```
+
+**✅ Prefer: Explicit Null Check**
+```typescript
+// Guard: Check for null and success
+if (!realDebridResult || !realDebridResult.success) {
+    return handleError(realDebridResult?.error);
+}
+
+// TypeScript knows realDebridResult is non-null here
+const username = realDebridResult.username;  // Type-safe!
+```
+
+#### Validation Logic Extraction
+
+Move complex inline validation to named handler functions.
+
+**❌ Avoid: Inline Validation in JSX**
+```tsx
+<input
+    onChange={(e) => setSettings({
+        ...settings,
+        interval: Math.max(30, Math.min(300, parseInt(e.target.value) || 60))
+    })}
+/>
+```
+
+**✅ Prefer: Named Handler**
+```tsx
+const MIN_INTERVAL = 30;
+const MAX_INTERVAL = 300;
+const DEFAULT_INTERVAL = 60;
+
+const handleIntervalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    const clampedValue = isNaN(value)
+        ? DEFAULT_INTERVAL
+        : Math.max(MIN_INTERVAL, Math.min(MAX_INTERVAL, value));
+
+    setSettings({ ...settings, interval: clampedValue });
+};
+
+<input onChange={handleIntervalChange} />
+```
+
+#### Benefits Summary
+
+- ✅ **Readability:** Less mental overhead tracking nested conditions
+- ✅ **Maintainability:** Changes require fewer indentation adjustments
+- ✅ **Testability:** Helper functions can be unit tested independently
+- ✅ **Type Safety:** Proper type narrowing with explicit checks
+- ✅ **DRY Principle:** Extract duplicated logic into reusable functions
+- ✅ **Debugging:** Easier to add breakpoints and logging at top level
