@@ -12,7 +12,7 @@
     "watch:main": "tsc -p tsconfig.main.json -w",
     "dev": "concurrently -k \"vite\" \"npm run watch:main\" \"NODE_ENV=development electron .\"",
     "preview": "vite preview",
-    "test": "node --import tsx --test --experimental-test-coverage test/verify.ts",
+    "test": "node --import tsx --test --experimental-test-coverage test/*.test.ts",
     "dist": "npm run build && electron-builder"
   },
   "keywords": [],

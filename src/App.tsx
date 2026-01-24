@@ -7,6 +7,7 @@ import { SecureStatusView } from './components/SecureStatusView';
 import { SettingsView } from './components/SettingsView';
 import { FileMetadata, HistoryItem, Settings, UploadProgress, ViewState } from './types';
 import { HardDrive, Menu } from 'lucide-react';
+import { shouldRunConnectionCheck } from './logic/connectionMonitoring';
 
 // Helper to generate unique IDs
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -112,7 +113,8 @@ const App: React.FC = () => {
         const checkInterval = (settings.connectionCheckInterval ?? 60) * 1000;
 
         const checkConnections = async () => {
-            if (!isAppVisible) return;
+            // Guard: Pause checks when app is not visible
+            if (!shouldRunConnectionCheck(document.visibilityState)) return;
             await checkConnectionStatus(settings);
         };
 

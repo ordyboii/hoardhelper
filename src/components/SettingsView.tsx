@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Server, Folder, Link, User, Key, Zap, ExternalLink, Clock } from 'lucide-react';
 import { Settings, ExportResult, RealDebridConnectionResult } from '../types';
+import {
+    clampCheckInterval,
+    MIN_CHECK_INTERVAL,
+    MAX_CHECK_INTERVAL,
+    DEFAULT_CHECK_INTERVAL
+} from '../logic/connectionMonitoring';
 
 interface SettingsViewProps {
     initialSettings: Settings;
@@ -8,11 +14,6 @@ interface SettingsViewProps {
     onTestConnection: (settings: Settings) => Promise<ExportResult>;
     onTestRealDebrid: (apiKey: string) => Promise<RealDebridConnectionResult>;
 }
-
-// Connection check interval constraints
-const MIN_CHECK_INTERVAL = 30;  // seconds
-const MAX_CHECK_INTERVAL = 300; // seconds
-const DEFAULT_CHECK_INTERVAL = 60; // seconds
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
     initialSettings,
@@ -80,13 +81,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     /**
      * Handles changes to the connection check interval input.
-     * Validates and clamps the value between MIN_CHECK_INTERVAL and MAX_CHECK_INTERVAL.
+     * Validates and clamps the value using the utility function.
      */
     const handleIntervalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseInt(e.target.value, 10);
-        const clampedValue = isNaN(value)
-            ? DEFAULT_CHECK_INTERVAL
-            : Math.max(MIN_CHECK_INTERVAL, Math.min(MAX_CHECK_INTERVAL, value));
+        const clampedValue = clampCheckInterval(value);
 
         setSettings({ ...settings, connectionCheckInterval: clampedValue });
     };
