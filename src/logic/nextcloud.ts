@@ -38,7 +38,6 @@ export function initializeClient(
     username: username,
     password: password,
     maxBodyLength: 10 * 1024 * 1024 * 1024, // 10GB limit
-    timeout: 10000, // 10 second timeout
   });
   return true;
 }
@@ -55,15 +54,21 @@ export async function testConnection(
       username: username,
       password: password,
       maxBodyLength: 10 * 1024 * 1024 * 1024,
-      timeout: 10000, // 10 second timeout
     });
   }
 
   if (!clientToTest)
     throw new Error("Client not initialized and no credentials provided");
 
-  // Try to list the root directory
-  await clientToTest.getDirectoryContents("/");
+  // Try to list the root directory with timeout
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("Connection timeout after 10 seconds")), 10000)
+  );
+
+  await Promise.race([
+    clientToTest.getDirectoryContents("/"),
+    timeoutPromise,
+  ]);
   return true;
 }
 

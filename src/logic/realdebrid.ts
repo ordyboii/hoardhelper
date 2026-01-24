@@ -12,7 +12,7 @@ const REALDEBRID_API_BASE = "https://api.real-debrid.com/rest/1.0";
 const RealDebridUserResponseSchema = z.object({
   id: z.number().int().positive(),
   username: z.string().min(1),
-  email: z.string().email(),
+  email: z.string().min(1), // Real-Debrid masks emails (e.g., "u***@example.com"), so we can't use strict .email() validation
   points: z.number().int().nonnegative(),
   locale: z.string().min(2).max(5), // e.g., "en", "en-US"
   avatar: z.string().url(),

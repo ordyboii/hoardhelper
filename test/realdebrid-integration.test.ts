@@ -272,11 +272,11 @@ describe("Real-Debrid Integration Tests", () => {
       assert.ok(result.error?.includes("Invalid API response"));
     });
 
-    it("should reject response with invalid email format", async () => {
-      const invalidEmailData = {
+    it("should accept response with masked email format", async () => {
+      const maskedEmailData = {
         id: 12345,
         username: "testuser",
-        email: "not-an-email",
+        email: "u***@example.com", // Real-Debrid masks emails for privacy
         points: 1000,
         locale: "en",
         avatar: "https://example.com/avatar.png",
@@ -288,14 +288,14 @@ describe("Real-Debrid Integration Tests", () => {
         Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve(invalidEmailData),
+          json: () => Promise.resolve(maskedEmailData),
         }),
       );
 
       const result = await testRealDebridConnection("valid-key");
 
-      assert.strictEqual(result.success, false);
-      assert.ok(result.error?.includes("Invalid API response"));
+      assert.strictEqual(result.success, true);
+      assert.strictEqual(result.username, "testuser");
     });
 
     it("should reject response with invalid avatar URL", async () => {

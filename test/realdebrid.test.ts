@@ -11,7 +11,7 @@ import { z } from "zod";
 const RealDebridUserResponseSchema = z.object({
   id: z.number().int().positive(),
   username: z.string().min(1),
-  email: z.string().email(),
+  email: z.string().min(1), // Real-Debrid masks emails (e.g., "u***@example.com"), so we can't use strict .email() validation
   points: z.number().int().nonnegative(),
   locale: z.string().min(2).max(5),
   avatar: z.string().url(),
@@ -133,11 +133,27 @@ describe("Real-Debrid Response Validation (Zod)", () => {
       assert.strictEqual(result.success, false);
     });
 
-    it("should reject invalid email", () => {
+    it("should accept masked email (Real-Debrid masks for privacy)", () => {
       const response = {
         id: 12345,
         username: "testuser",
-        email: "not-an-email",
+        email: "u***@example.com", // Masked email format
+        points: 1000,
+        locale: "en",
+        avatar: "https://example.com/avatar.png",
+        type: "premium",
+        premium: 1234567890,
+      };
+
+      const result = RealDebridUserResponseSchema.safeParse(response);
+      assert.strictEqual(result.success, true);
+    });
+
+    it("should reject empty email", () => {
+      const response = {
+        id: 12345,
+        username: "testuser",
+        email: "",
         points: 1000,
         locale: "en",
         avatar: "https://example.com/avatar.png",
