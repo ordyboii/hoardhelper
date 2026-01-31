@@ -78,6 +78,39 @@ export interface RealDebridConnectionResult {
   error?: string;
 }
 
+export interface TorrentFile {
+  id: number;
+  path: string; // Path to the file inside the torrent, starting with "/"
+  bytes: number; // File size in bytes
+  selected: number; // 0 or 1, indicates if file is selected for download
+}
+
+export interface TorrentInfo {
+  id: string;
+  filename: string;
+  original_filename: string;
+  hash: string; // SHA1 Hash of the torrent
+  bytes: number; // Size of selected files only
+  original_bytes: number; // Total size of the torrent
+  host: string; // Host main domain
+  split: number; // Split size of links
+  progress: number; // Possible values: 0 to 100
+  status: string; // Current status: magnet_error, magnet_conversion, waiting_files_selection, queued, downloading, downloaded, error, virus, compressing, uploading, dead
+  added: string; // jsonDate
+  files: TorrentFile[];
+  links: string[]; // Host URLs
+  ended?: string; // !! Only present when finished, jsonDate
+  speed?: number; // !! Only present in "downloading", "compressing", "uploading" status
+  seeders?: number; // !! Only present in "downloading", "magnet_conversion" status
+}
+
+export interface AddMagnetResult {
+  success: boolean;
+  torrentId?: string;
+  uri?: string;
+  error?: string;
+}
+
 export interface UploadProgress {
   index: number;
   percent: number;
@@ -102,4 +135,7 @@ export interface ElectronAPI {
   generatePath: (metadata: FileMetadata) => Promise<string | null>;
   onUploadProgress: (callback: (data: UploadProgress) => void) => void;
   log: (msg: string) => void;
+  // Real-Debrid magnet and torrent methods
+  addMagnetToRealDebrid: (magnet: string) => Promise<AddMagnetResult>;
+  getTorrentInfo: (torrentId: string) => Promise<TorrentInfo>;
 }

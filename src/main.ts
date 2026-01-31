@@ -12,6 +12,8 @@ import {
 import {
   initializeRealDebrid,
   testRealDebridConnection,
+  addMagnetToRealDebrid,
+  getTorrentInfo,
 } from "./logic/realdebrid.js";
 import {
   encryptString,
@@ -258,6 +260,15 @@ ipcMain.handle("test-connection", async (event, settings?: Settings) => {
 
 ipcMain.handle("test-realdebrid-connection", async (event, apiKey?: string) => {
   return await testRealDebridConnection(apiKey);
+});
+
+// Real-Debrid magnet and torrent handlers
+ipcMain.handle("add-magnet-to-realdebrid", async (event, magnet: string) => {
+  return await addMagnetToRealDebrid(magnet);
+});
+
+ipcMain.handle("get-torrent-info", async (event, torrentId: string) => {
+  return await getTorrentInfo(torrentId);
 });
 
 // 1. Parse Files
