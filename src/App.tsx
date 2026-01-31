@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "./components/Sidebar";
-import { DropZone } from "./components/DropZone";
+import { LootView } from "./components/LootView";
+import type { LootTab } from "./components/LootView";
 import { QueueList } from "./components/QueueList";
 import { EditView } from "./components/EditView";
 import { SecureStatusView } from "./components/SecureStatusView";
@@ -11,6 +12,7 @@ import {
   Settings,
   UploadProgress,
   ViewState,
+  TorrentInfo,
 } from "./types";
 import { HardDrive, Menu } from "lucide-react";
 import { shouldRunConnectionCheck } from "./logic/connectionMonitoring";
@@ -41,6 +43,14 @@ const App: React.FC = () => {
   const [nextcloudConnected, setNextcloudConnected] = useState(false);
   const [realDebridConnected, setRealDebridConnected] = useState(false);
   const [isAppVisible, setIsAppVisible] = useState(true);
+  const [lootActiveTab, setLootActiveTab] = useState<LootTab>("files");
+
+  // Real-Debrid magnet/torrent state
+  const [currentTorrent, setCurrentTorrent] = useState<TorrentInfo | null>(
+    null,
+  );
+  const [debridError, setDebridError] = useState<string | null>(null);
+  const [isDebridLoading, setIsDebridLoading] = useState(false);
 
   /**
    * Checks connection status for both Nextcloud and Real-Debrid services.
@@ -288,6 +298,51 @@ const App: React.FC = () => {
     return result;
   };
 
+  // Real-Debrid magnet handlers
+  const handleMagnetSubmit = async (magnet: string) => {
+    setIsDebridLoading(true);
+    setDebridError(null);
+    setCurrentTorrent(null);
+
+    try {
+      // Step 1: Add magnet to Real-Debrid
+      const magnetResult = await window.api.addMagnetToRealDebrid(magnet);
+
+      if (!magnetResult.success) {
+        setDebridError(magnetResult.error || "Failed to add magnet link");
+        return;
+      }
+
+      if (!magnetResult.torrentId) {
+        setDebridError("No torrent ID returned from Real-Debrid");
+        return;
+      }
+
+      // Step 2: Get torrent info (file list)
+      const torrentInfo = await window.api.getTorrentInfo(
+        magnetResult.torrentId,
+      );
+      setCurrentTorrent(torrentInfo);
+
+      // Clear input after successful submission
+      // Note: This will be handled by the DebridTab component itself
+    } catch (error) {
+      console.error("[App] Magnet submission failed:", error);
+      setDebridError(
+        error instanceof Error
+          ? error.message
+          : "Failed to process magnet link",
+      );
+    } finally {
+      setIsDebridLoading(false);
+    }
+  };
+
+  const handleClearTorrent = () => {
+    setCurrentTorrent(null);
+    setDebridError(null);
+  };
+
   const validCount = files.filter((f) => f.valid).length;
 
   // Render content based on current view or editing state
@@ -306,10 +361,19 @@ const App: React.FC = () => {
     switch (currentView) {
       case ViewState.Loot:
         return (
-          <DropZone
+          <LootView
             onFilesDropped={handleFilesDropped}
             fileCount={files.length}
             onClear={handleClear}
+            activeTab={lootActiveTab}
+            onTabChange={setLootActiveTab}
+            realDebridConnected={realDebridConnected}
+            onNavigateToSettings={() => setCurrentView(ViewState.Map)}
+            currentTorrent={currentTorrent}
+            debridError={debridError}
+            isDebridLoading={isDebridLoading}
+            onMagnetSubmit={handleMagnetSubmit}
+            onClearTorrent={handleClearTorrent}
           />
         );
       case ViewState.Extraction:
@@ -336,10 +400,19 @@ const App: React.FC = () => {
         );
       default:
         return (
-          <DropZone
+          <LootView
             onFilesDropped={handleFilesDropped}
             fileCount={files.length}
             onClear={handleClear}
+            activeTab={lootActiveTab}
+            onTabChange={setLootActiveTab}
+            realDebridConnected={realDebridConnected}
+            onNavigateToSettings={() => setCurrentView(ViewState.Map)}
+            currentTorrent={currentTorrent}
+            debridError={debridError}
+            isDebridLoading={isDebridLoading}
+            onMagnetSubmit={handleMagnetSubmit}
+            onClearTorrent={handleClearTorrent}
           />
         );
     }

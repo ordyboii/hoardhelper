@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { RealDebridConnectionResult } from "../types/index.js";
+import {
+  RealDebridConnectionResult,
+  AddMagnetResult,
+  TorrentInfo,
+} from "../types/index.js";
 
 const REALDEBRID_API_BASE = "https://api.real-debrid.com/rest/1.0";
 
@@ -22,9 +26,51 @@ const RealDebridUserResponseSchema = z.object({
 });
 
 /**
- * TypeScript type inferred from Zod schema
+ * Zod schema for Real-Debrid /torrents/addMagnet API response
+ */
+const AddMagnetResponseSchema = z.object({
+  id: z.string(), // Torrent ID
+  uri: z.string().url(), // URL of the created resource
+});
+
+/**
+ * Zod schema for Real-Debrid /torrents/info/{id} API response
+ */
+const TorrentFileSchema = z.object({
+  id: z.number().int().nonnegative(),
+  path: z.string().startsWith("/"), // Path starting with "/"
+  bytes: z.number().int().nonnegative(),
+  selected: z
+    .number()
+    .int()
+    .refine((val) => val === 0 || val === 1, "selected must be 0 or 1"),
+});
+
+const TorrentInfoResponseSchema = z.object({
+  id: z.string(),
+  filename: z.string().min(1),
+  original_filename: z.string().min(1),
+  hash: z.string().min(40), // SHA1 is 40 hex characters
+  bytes: z.number().int().nonnegative(),
+  original_bytes: z.number().int().nonnegative(),
+  host: z.string().min(1),
+  split: z.number().int().positive(),
+  progress: z.number().min(0).max(100),
+  status: z.string().min(1),
+  added: z.string().datetime(),
+  files: z.array(TorrentFileSchema),
+  links: z.array(z.string().url()),
+  ended: z.string().datetime().optional(),
+  speed: z.number().int().nonnegative().optional(),
+  seeders: z.number().int().nonnegative().optional(),
+});
+
+/**
+ * TypeScript types inferred from Zod schemas
  */
 type _RealDebridUserResponse = z.infer<typeof RealDebridUserResponseSchema>;
+type _AddMagnetResponse = z.infer<typeof AddMagnetResponseSchema>;
+type _TorrentInfoResponse = z.infer<typeof TorrentInfoResponseSchema>;
 
 /**
  * RealDebridClient encapsulates the API key and provides methods for Real-Debrid API interactions.
@@ -131,6 +177,141 @@ class RealDebridClient {
       return { success: false, error: errorMessage };
     }
   }
+
+  /**
+   * Adds a magnet link to Real-Debrid
+   */
+  async addMagnet(magnet: string): Promise<AddMagnetResult> {
+    try {
+      const response = await this.request("/torrents/addMagnet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `magnet=${encodeURIComponent(magnet)}`,
+      });
+
+      if (!response.ok) {
+        // Handle specific error cases
+        switch (response.status) {
+          case 400:
+            return { success: false, error: "Invalid magnet link" };
+          case 401:
+            return { success: false, error: "Invalid API token" };
+          case 403:
+            return {
+              success: false,
+              error:
+                "Account locked or not premium - Real-Debrid premium required for torrents",
+            };
+          case 429:
+            return {
+              success: false,
+              error: "Too many requests - please wait 60 seconds",
+            };
+          case 503:
+            return {
+              success: false,
+              error:
+                "Service unavailable - the torrent may be dead or not supported",
+            };
+          default:
+            return {
+              success: false,
+              error: `API error: ${response.status} ${response.statusText}`,
+            };
+        }
+      }
+
+      const rawData = await response.json();
+
+      // Validate response structure with Zod
+      const parseResult = AddMagnetResponseSchema.safeParse(rawData);
+
+      if (!parseResult.success) {
+        console.error("[RealDebrid] Invalid addMagnet response structure:", {
+          data: rawData,
+          errors: parseResult.error.issues,
+        });
+        return {
+          success: false,
+          error: `Invalid API response: ${parseResult.error.issues[0]?.message || "Unknown validation error"}`,
+        };
+      }
+
+      const magnetData = parseResult.data;
+
+      return {
+        success: true,
+        torrentId: magnetData.id,
+        uri: magnetData.uri,
+      };
+    } catch (error) {
+      // Handle network errors
+      if (error instanceof Error && error.name === "AbortError") {
+        return {
+          success: false,
+          error: "Connection timeout - please try again",
+        };
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to add magnet";
+      console.error("[RealDebrid] addMagnet failed:", error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * Gets torrent information including file list
+   */
+  async getTorrentInfo(torrentId: string): Promise<TorrentInfo> {
+    try {
+      const response = await this.request(`/torrents/info/${torrentId}`);
+
+      if (!response.ok) {
+        // Handle specific error cases
+        switch (response.status) {
+          case 401:
+            throw new Error("Invalid API token");
+          case 403:
+            throw new Error("Permission denied - account locked");
+          case 404:
+            throw new Error("Unknown torrent resource");
+          default:
+            throw new Error(
+              `API error: ${response.status} ${response.statusText}`,
+            );
+        }
+      }
+
+      const rawData = await response.json();
+
+      // Validate response structure with Zod
+      const parseResult = TorrentInfoResponseSchema.safeParse(rawData);
+
+      if (!parseResult.success) {
+        console.error("[RealDebrid] Invalid torrent info response structure:", {
+          data: rawData,
+          errors: parseResult.error.issues,
+        });
+        throw new Error(
+          `Invalid API response: ${parseResult.error.issues[0]?.message || "Unknown validation error"}`,
+        );
+      }
+
+      const torrentData = parseResult.data;
+
+      // Return the validated and typed torrent info
+      return torrentData;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      console.error("[RealDebrid] getTorrentInfo failed:", error);
+      throw new Error("Failed to fetch torrent information");
+    }
+  }
 }
 
 let client: RealDebridClient | null = null;
@@ -163,4 +344,50 @@ export async function testRealDebridConnection(
   }
 
   return clientToTest.testConnection();
+}
+
+/**
+ * Adds a magnet link to Real-Debrid
+ */
+export async function addMagnetToRealDebrid(
+  magnet: string,
+): Promise<AddMagnetResult> {
+  if (!client) {
+    return { success: false, error: "Real-Debrid not configured" };
+  }
+
+  // Basic magnet link validation
+  if (!magnet || typeof magnet !== "string") {
+    return { success: false, error: "Please enter a valid magnet link" };
+  }
+
+  // Check if it's a valid magnet link format
+  if (!magnet.startsWith("magnet:?xt=urn:btih:")) {
+    return { success: false, error: "Please enter a valid magnet link" };
+  }
+
+  // Check for extremely long magnets (over 2000 characters)
+  if (magnet.length > 2000) {
+    return {
+      success: false,
+      error: "Magnet link is too long - please check the link",
+    };
+  }
+
+  return client.addMagnet(magnet);
+}
+
+/**
+ * Gets torrent information including file list
+ */
+export async function getTorrentInfo(torrentId: string): Promise<TorrentInfo> {
+  if (!client) {
+    throw new Error("Real-Debrid not configured");
+  }
+
+  if (!torrentId || typeof torrentId !== "string") {
+    throw new Error("Invalid torrent ID");
+  }
+
+  return client.getTorrentInfo(torrentId);
 }
