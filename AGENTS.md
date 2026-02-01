@@ -213,6 +213,8 @@ const settings = SettingsSchema.parse(untrustedData);
 - **Branch**: `ordyboii/feature-name` (lowercase with hyphens)
 - **Commits**: Conventional format (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`)
 - **PRs**: Title format `US-XXX: Brief description` (reference User Story ID)
+  - **ALWAYS** include `Closes #XX` or `Fixes #XX` in the PR body if there's a GitHub issue to close
+  - This automatically closes the issue when the PR is merged
 - **Prepare**: Run tests, linting, formatting before committing
 
 ```bash
