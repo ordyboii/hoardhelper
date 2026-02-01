@@ -486,6 +486,278 @@
   font-style: italic;
 }
 
+/* ============================
+    MEDIA TYPE VIEWS
+    ============================ */
+
+.debrid-movie-view,
+.debrid-tv-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-4);
+}
+
+.debrid-movie-header,
+.debrid-tv-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.debrid-movie-icon,
+.debrid-tv-icon {
+  padding: var(--space-3);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--gold-dark);
+  border-radius: 12px;
+  color: var(--gold-primary);
+  flex-shrink: 0;
+}
+
+.debrid-movie-info,
+.debrid-tv-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.debrid-movie-title,
+.debrid-tv-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2) 0;
+  word-break: break-word;
+}
+
+.debrid-movie-meta,
+.debrid-tv-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.debrid-subtitle-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid var(--info);
+  border-radius: 6px;
+  color: var(--info);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.debrid-subtitle-badge.small {
+  padding: 2px var(--space-2);
+  font-size: 10px;
+}
+
+.debrid-movie-files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.debrid-movie-files-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.debrid-movie-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.debrid-movie-file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  transition: all 150ms ease;
+}
+
+.debrid-movie-file-check {
+  color: var(--success);
+  flex-shrink: 0;
+}
+
+.debrid-movie-file-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.debrid-movie-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.debrid-movie-file-name {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  word-break: break-word;
+  margin-bottom: var(--space-1);
+}
+
+.debrid-movie-file-size {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.debrid-tv-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.debrid-tv-action {
+  flex: 1;
+}
+
+.debrid-tv-files {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.debrid-tv-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+  flex: 1;
+  max-height: 400px;
+}
+
+.debrid-tv-file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.debrid-tv-file:hover {
+  background: var(--bg-secondary);
+  border-color: var(--gold-dark);
+}
+
+.debrid-tv-file.selected {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: var(--gold-primary);
+}
+
+.debrid-tv-file-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--text-tertiary);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 150ms ease;
+}
+
+.debrid-tv-file.selected .debrid-tv-file-checkbox {
+  border-color: var(--gold-primary);
+  background: var(--gold-primary);
+}
+
+.debrid-tv-file-checkbox svg {
+  color: var(--bg-primary);
+}
+
+.debrid-tv-file-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.debrid-tv-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.debrid-tv-file-name {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  word-break: break-word;
+  margin-bottom: var(--space-1);
+}
+
+.debrid-tv-file-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.debrid-episode-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid var(--info);
+  border-radius: 4px;
+  color: var(--info);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+}
+
+.debrid-tv-file-size {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.debrid-tv-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-default);
+}
+
+.debrid-tv-selection-info {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.debrid-tv-buttons {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.debrid-confirm-button {
+  max-width: 200px;
+}
+
+.debrid-cancel-button {
+  width: auto;
+  min-width: 140px;
+}
+
+.debrid-movie-footer {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
 body {
   margin: 0;
   padding: 0;

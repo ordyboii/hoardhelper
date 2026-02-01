@@ -36,6 +36,27 @@ contextBridge.exposeInMainWorld("api", {
     ) as Promise<AddMagnetResult>,
   getTorrentInfo: (torrentId: string) =>
     ipcRenderer.invoke("get-torrent-info", torrentId) as Promise<TorrentInfo>,
+  selectFiles: (torrentId: string, fileIds: number[]) =>
+    ipcRenderer.invoke(
+      "select-files",
+      torrentId,
+      fileIds,
+    ) as Promise<TorrentInfo>,
+  deleteTorrent: (torrentId: string) =>
+    ipcRenderer.invoke("delete-torrent", torrentId) as Promise<{
+      success: boolean;
+      error?: string;
+    }>,
+  unrestrictLinks: (links: string[]) =>
+    ipcRenderer.invoke("unrestrict-links", links) as Promise<
+      Array<{ success: boolean; url?: string; error?: string }>
+    >,
+  downloadFiles: (
+    items: Array<{ downloadUrl: string; filename: string; bytes: number }>,
+  ) =>
+    ipcRenderer.invoke("download-files", items) as Promise<
+      Array<{ success: boolean; localPath?: string; error?: string }>
+    >,
 
   // Helper to generate path for edit mode
   generatePath: (metadata: FileMetadata) =>
@@ -44,6 +65,10 @@ contextBridge.exposeInMainWorld("api", {
   // Listen for upload progress
   onUploadProgress: (callback: (data: UploadProgress) => void) =>
     ipcRenderer.on("upload-progress", (_, data) => callback(data)),
+
+  // Listen for download progress
+  onDownloadProgress: (callback: (percent: number) => void) =>
+    ipcRenderer.on("download-progress", (_, percent) => callback(percent)),
 
   // Log to main process stdout
   log: (msg: string) => ipcRenderer.send("console-log", msg),

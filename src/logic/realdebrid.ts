@@ -312,6 +312,148 @@ class RealDebridClient {
       throw new Error("Failed to fetch torrent information");
     }
   }
+
+  /**
+   * Selects files for download from a torrent
+   */
+  async selectFiles(
+    torrentId: string,
+    fileIds: number[],
+  ): Promise<TorrentInfo> {
+    try {
+      const response = await this.request(
+        `/torrents/selectFiles/${torrentId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: `files=${fileIds.join(",")}`,
+        },
+      );
+
+      if (!response.ok) {
+        switch (response.status) {
+          case 401:
+            throw new Error("Invalid API token");
+          case 403:
+            throw new Error("Permission denied - account locked");
+          case 404:
+            throw new Error("Unknown torrent resource");
+          case 503:
+            throw new Error("Service unavailable - torrent may be dead");
+          default:
+            throw new Error(
+              `API error: ${response.status} ${response.statusText}`,
+            );
+        }
+      }
+
+      return await this.getTorrentInfo(torrentId);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      console.error("[RealDebrid] selectFiles failed:", error);
+      throw new Error("Failed to select files");
+    }
+  }
+
+  /**
+   * Polls torrent status until downloaded or timeout
+   * Polls every 5 seconds with a 10-minute timeout
+   */
+  async pollTorrentUntilDownloaded(torrentId: string): Promise<TorrentInfo> {
+    const MAX_POLL_ATTEMPTS = 120;
+    const POLL_INTERVAL_MS = 5000;
+
+    for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+      const info = await this.getTorrentInfo(torrentId);
+
+      if (info.status === "downloaded") {
+        return info;
+      }
+
+      if (["error", "dead", "magnet_error", "virus"].includes(info.status)) {
+        throw new Error(`Torrent failed with status: ${info.status}`);
+      }
+
+      if (attempt < MAX_POLL_ATTEMPTS - 1) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      }
+    }
+
+    throw new Error("Torrent download timeout after 10 minutes");
+  }
+
+  /**
+   * Deletes a torrent from Real-Debrid
+   */
+  async deleteTorrent(torrentId: string): Promise<void> {
+    try {
+      const response = await this.request(`/torrents/delete/${torrentId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        switch (response.status) {
+          case 401:
+            throw new Error("Invalid API token");
+          case 403:
+            throw new Error("Permission denied - account locked");
+          case 404:
+            throw new Error("Unknown torrent resource");
+          default:
+            throw new Error(
+              `API error: ${response.status} ${response.statusText}`,
+            );
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      console.error("[RealDebrid] deleteTorrent failed:", error);
+      throw new Error("Failed to delete torrent");
+    }
+  }
+
+  async unrestrictLink(link: string): Promise<{ download: string }> {
+    try {
+      const response = await this.request("/unrestrict/link", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `link=${encodeURIComponent(link)}`,
+      });
+
+      if (!response.ok) {
+        switch (response.status) {
+          case 400:
+            throw new Error("Invalid link");
+          case 401:
+            throw new Error("Invalid API token");
+          case 403:
+            throw new Error("Permission denied - account locked");
+          case 503:
+            throw new Error("Service unavailable");
+          default:
+            throw new Error(
+              `API error: ${response.status} ${response.statusText}`,
+            );
+        }
+      }
+
+      const rawData = await response.json();
+      return { download: rawData.download };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Failed to unrestrict link");
+    }
+  }
 }
 
 let client: RealDebridClient | null = null;
@@ -390,4 +532,71 @@ export async function getTorrentInfo(torrentId: string): Promise<TorrentInfo> {
   }
 
   return client.getTorrentInfo(torrentId);
+}
+
+/**
+ * Selects files for download from a torrent
+ */
+export async function selectFiles(
+  torrentId: string,
+  fileIds: number[],
+): Promise<TorrentInfo> {
+  if (!client) {
+    throw new Error("Real-Debrid not configured");
+  }
+
+  if (!torrentId || typeof torrentId !== "string") {
+    throw new Error("Invalid torrent ID");
+  }
+
+  if (!Array.isArray(fileIds) || fileIds.length === 0) {
+    throw new Error("Invalid file IDs");
+  }
+
+  return client.selectFiles(torrentId, fileIds);
+}
+
+/**
+ * Polls torrent status until downloaded or timeout
+ */
+export async function pollTorrentUntilDownloaded(
+  torrentId: string,
+): Promise<TorrentInfo> {
+  if (!client) {
+    throw new Error("Real-Debrid not configured");
+  }
+
+  if (!torrentId || typeof torrentId !== "string") {
+    throw new Error("Invalid torrent ID");
+  }
+
+  return client.pollTorrentUntilDownloaded(torrentId);
+}
+
+/**
+ * Deletes a torrent from Real-Debrid
+ */
+export async function deleteTorrent(torrentId: string): Promise<void> {
+  if (!client) {
+    throw new Error("Real-Debrid not configured");
+  }
+
+  if (!torrentId || typeof torrentId !== "string") {
+    throw new Error("Invalid torrent ID");
+  }
+
+  return client.deleteTorrent(torrentId);
+}
+
+export async function unrestrictLink(link: string): Promise<string> {
+  if (!client) {
+    throw new Error("Real-Debrid not configured");
+  }
+
+  if (!link || typeof link !== "string") {
+    throw new Error("Invalid link");
+  }
+
+  const result = await client.unrestrictLink(link);
+  return result.download;
 }
