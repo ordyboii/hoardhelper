@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import Store from "electron-store";
+import fs from "fs/promises";
 import { fileURLToPath } from "url";
 import { parseFilename } from "./logic/parser.js";
 import { generateNewPath } from "./logic/exporter.js";
@@ -14,12 +15,21 @@ import {
   testRealDebridConnection,
   addMagnetToRealDebrid,
   getTorrentInfo,
+  selectFiles,
+  pollTorrentUntilDownloaded,
+  deleteTorrent,
+  unrestrictLink,
 } from "./logic/realdebrid.js";
 import {
   encryptString,
   decryptString,
   isEncryptionAvailable,
 } from "./logic/secureStorage.js";
+import {
+  getTempDir,
+  downloadFilesInParallel,
+  cleanupTempFiles,
+} from "./logic/downloader.js";
 import type {
   Settings,
   StoredSettings,
@@ -174,7 +184,13 @@ function createWindow() {
   mainWindow.webContents.openDevTools();
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  try {
+    await cleanupTempFiles();
+  } catch (error) {
+    console.error("[Main] Failed to cleanup temp files:", error);
+  }
+
   createWindow();
 
   // Auto-initialize Nextcloud if settings exist
@@ -270,6 +286,82 @@ ipcMain.handle("add-magnet-to-realdebrid", async (event, magnet: string) => {
 ipcMain.handle("get-torrent-info", async (event, torrentId: string) => {
   return await getTorrentInfo(torrentId);
 });
+
+ipcMain.handle(
+  "select-files",
+  async (event, torrentId: string, fileIds: number[]) => {
+    try {
+      await selectFiles(torrentId, fileIds);
+      const downloadedInfo = await pollTorrentUntilDownloaded(torrentId);
+      return downloadedInfo;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error("[Main] selectFiles failed:", error);
+      return { success: false, error: message };
+    }
+  },
+);
+
+ipcMain.handle("delete-torrent", async (event, torrentId: string) => {
+  try {
+    await deleteTorrent(torrentId);
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("[Main] deleteTorrent failed:", error);
+    return { success: false, error: message };
+  }
+});
+
+ipcMain.handle("unrestrict-links", async (event, links: string[]) => {
+  const results = [];
+  for (const link of links) {
+    try {
+      const url = await unrestrictLink(link);
+      results.push({ success: true, url });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      results.push({ success: false, error: message });
+    }
+  }
+  return results;
+});
+
+ipcMain.handle(
+  "download-files",
+  async (
+    event,
+    items: Array<{ downloadUrl: string; filename: string; bytes: number }>,
+  ) => {
+    try {
+      const downloadItems = items.map((item) => ({
+        url: item.downloadUrl,
+        localPath: path.join(getTempDir(), item.filename),
+        bytes: item.bytes,
+      }));
+
+      const results = await downloadFilesInParallel(
+        downloadItems,
+        3,
+        (percent) => {
+          event.sender.send("download-progress", percent);
+        },
+      );
+
+      const mappedResults = results.map((r, index) => ({
+        success: r.success,
+        localPath: r.success ? downloadItems[index].localPath : undefined,
+        error: r.error,
+      }));
+
+      return mappedResults;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error("[Main] downloadFiles failed:", error);
+      return [{ success: false, error: message }];
+    }
+  },
+);
 
 // 1. Parse Files
 ipcMain.handle("parse-files", async (event, filePaths: string[]) => {
@@ -383,7 +475,16 @@ ipcMain.handle("export-files", async (event, filesToExport: FileMetadata[]) => {
         },
       );
 
-      if (result.success) break;
+      if (result.success) {
+        if (file.isTempFile && file.fullPath) {
+          try {
+            await fs.unlink(file.fullPath);
+          } catch (error) {
+            console.error("[Nextcloud] Failed to delete temp file:", error);
+          }
+        }
+        break;
+      }
       attempts++;
       console.log(
         `[Upload Fail] Retry ${attempts}/${maxAttempts} for ${file.originalName}`,

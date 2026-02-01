@@ -13,9 +13,12 @@ import {
   UploadProgress,
   ViewState,
   TorrentInfo,
+  MediaType,
+  FileWithSubtitleInfo,
 } from "./types";
 import { HardDrive, Menu } from "lucide-react";
 import { shouldRunConnectionCheck } from "./logic/connectionMonitoring";
+import { detectMediaType, getFilesWithSubtitleInfo } from "./logic/mediatype";
 
 // Helper to generate unique IDs
 const generateId = () =>
@@ -51,6 +54,14 @@ const App: React.FC = () => {
   );
   const [debridError, setDebridError] = useState<string | null>(null);
   const [isDebridLoading, setIsDebridLoading] = useState(false);
+
+  const [mediaType, setMediaType] = useState<MediaType | null>(null);
+  const [selectedFileIds, setSelectedFileIds] = useState<number[]>([]);
+  const [filesWithSubtitles, setFilesWithSubtitles] = useState<
+    FileWithSubtitleInfo[]
+  >([]);
+  const [isProcessingDownload, setIsProcessingDownload] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<number>(0);
 
   /**
    * Checks connection status for both Nextcloud and Real-Debrid services.
@@ -127,6 +138,10 @@ const App: React.FC = () => {
         }
         return newFiles;
       });
+    });
+
+    window.api.onDownloadProgress((percent: number) => {
+      setDownloadProgress(percent);
     });
   }, [checkConnectionStatus]);
 
@@ -305,7 +320,6 @@ const App: React.FC = () => {
     setCurrentTorrent(null);
 
     try {
-      // Step 1: Add magnet to Real-Debrid
       const magnetResult = await window.api.addMagnetToRealDebrid(magnet);
 
       if (!magnetResult.success) {
@@ -318,14 +332,11 @@ const App: React.FC = () => {
         return;
       }
 
-      // Step 2: Get torrent info (file list)
       const torrentInfo = await window.api.getTorrentInfo(
         magnetResult.torrentId,
       );
       setCurrentTorrent(torrentInfo);
-
-      // Clear input after successful submission
-      // Note: This will be handled by the DebridTab component itself
+      handleDetectMediaType(torrentInfo);
     } catch (error) {
       console.error("[App] Magnet submission failed:", error);
       setDebridError(
@@ -341,6 +352,128 @@ const App: React.FC = () => {
   const handleClearTorrent = () => {
     setCurrentTorrent(null);
     setDebridError(null);
+    setMediaType(null);
+    setSelectedFileIds([]);
+    setFilesWithSubtitles([]);
+  };
+
+  const handleDeleteTorrent = async () => {
+    if (!currentTorrent) return;
+
+    try {
+      await window.api.deleteTorrent(currentTorrent.id);
+      handleClearTorrent();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setDebridError(message);
+    }
+  };
+
+  const handleDetectMediaType = (torrentInfo: TorrentInfo) => {
+    const detection = detectMediaType(torrentInfo.files);
+    setMediaType(detection.mediaType);
+
+    const videoFilesWithSubs = getFilesWithSubtitleInfo(
+      detection.videoFiles,
+      detection.subtitleFiles,
+    );
+    setFilesWithSubtitles(videoFilesWithSubs);
+
+    if (detection.mediaType === "movie") {
+      setSelectedFileIds(detection.videoFiles.map((f) => f.id));
+      const subtitleFileIds = detection.subtitleFiles.map((s) => s.id);
+      setSelectedFileIds((prev) => [...prev, ...subtitleFileIds]);
+    }
+  };
+
+  const handleFileSelection = (fileId: number, subtitleFileIds: number[]) => {
+    setSelectedFileIds((prev) => {
+      const isFileSelected = prev.includes(fileId);
+      let newIds: number[];
+
+      if (isFileSelected) {
+        newIds = prev.filter(
+          (id) => id !== fileId && !subtitleFileIds.includes(id),
+        );
+      } else {
+        newIds = [...prev, fileId, ...subtitleFileIds];
+      }
+
+      return newIds;
+    });
+  };
+
+  const handleSelectAllFiles = () => {
+    const allIds = filesWithSubtitles.flatMap((f) => [
+      f.id,
+      ...f.subtitleFileIds,
+    ]);
+    setSelectedFileIds(allIds);
+  };
+
+  const handleDeselectAllFiles = () => {
+    setSelectedFileIds([]);
+  };
+
+  const handleConfirmSelection = async () => {
+    if (!currentTorrent) return;
+
+    setIsProcessingDownload(true);
+    setDebridError(null);
+    setDownloadProgress(0);
+
+    try {
+      const downloadedInfo = await window.api.selectFiles(
+        currentTorrent.id,
+        selectedFileIds,
+      );
+
+      const unrestrictResults = await window.api.unrestrictLinks(
+        downloadedInfo.links,
+      );
+
+      if (unrestrictResults.some((r) => !r.success)) {
+        const firstError = unrestrictResults.find((r) => !r.success)?.error;
+        throw new Error(`Failed to unrestrict links: ${firstError}`);
+      }
+
+      const selectedFiles = downloadedInfo.files.filter((f) =>
+        selectedFileIds.includes(f.id),
+      );
+      const downloadItems = selectedFiles.map((file, index) => ({
+        downloadUrl: unrestrictResults[index].url!,
+        filename: file.path.split("/").pop() || `file_${file.id}`,
+        bytes: file.bytes,
+      }));
+
+      const downloadResults = await window.api.downloadFiles(downloadItems);
+
+      if (downloadResults.some((r) => !r.success)) {
+        const firstError = downloadResults.find((r) => !r.success)?.error;
+        throw new Error(`Failed to download files: ${firstError}`);
+      }
+
+      const downloadedPaths = downloadResults
+        .map((r) => r.localPath)
+        .filter((p): p is string => p !== undefined);
+
+      const parsedFiles = await window.api.parseFiles(downloadedPaths);
+
+      setFiles((prev) => [...prev, ...parsedFiles]);
+
+      setCurrentTorrent(null);
+      setMediaType(null);
+      setSelectedFileIds([]);
+      setFilesWithSubtitles([]);
+
+      setTimeout(() => setCurrentView(ViewState.Extraction), 300);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setDebridError(message);
+    } finally {
+      setIsProcessingDownload(false);
+      setDownloadProgress(0);
+    }
   };
 
   const validCount = files.filter((f) => f.valid).length;
@@ -373,7 +506,16 @@ const App: React.FC = () => {
             debridError={debridError}
             isDebridLoading={isDebridLoading}
             onMagnetSubmit={handleMagnetSubmit}
-            onClearTorrent={handleClearTorrent}
+            onDeleteTorrent={handleDeleteTorrent}
+            mediaType={mediaType}
+            selectedFileIds={selectedFileIds}
+            filesWithSubtitles={filesWithSubtitles}
+            isProcessingDownload={isProcessingDownload}
+            onFileSelection={handleFileSelection}
+            onSelectAllFiles={handleSelectAllFiles}
+            onDeselectAllFiles={handleDeselectAllFiles}
+            onConfirmSelection={handleConfirmSelection}
+            downloadProgress={downloadProgress}
           />
         );
       case ViewState.Extraction:
@@ -412,7 +554,16 @@ const App: React.FC = () => {
             debridError={debridError}
             isDebridLoading={isDebridLoading}
             onMagnetSubmit={handleMagnetSubmit}
-            onClearTorrent={handleClearTorrent}
+            onDeleteTorrent={handleDeleteTorrent}
+            mediaType={mediaType}
+            selectedFileIds={selectedFileIds}
+            filesWithSubtitles={filesWithSubtitles}
+            isProcessingDownload={isProcessingDownload}
+            onFileSelection={handleFileSelection}
+            onSelectAllFiles={handleSelectAllFiles}
+            onDeselectAllFiles={handleDeselectAllFiles}
+            onConfirmSelection={handleConfirmSelection}
+            downloadProgress={downloadProgress}
           />
         );
     }

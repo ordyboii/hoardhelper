@@ -29,6 +29,7 @@ export interface FileMetadata extends ParseResult {
   valid: boolean;
   error?: string;
   _retryId?: string; // Internal: tracks if this is a retry of a previous upload
+  isTempFile?: boolean; // Flag to indicate file should be deleted after upload
 }
 
 export interface HistoryItem extends FileMetadata {
@@ -111,6 +112,19 @@ export interface AddMagnetResult {
   error?: string;
 }
 
+export type MediaType = "tv" | "movie" | "ambiguous";
+
+export interface MediaDetectionResult {
+  mediaType: MediaType;
+  videoFiles: TorrentFile[];
+  subtitleFiles: TorrentFile[];
+  junkFiles: TorrentFile[];
+}
+
+export interface FileWithSubtitleInfo extends TorrentFile {
+  subtitleFileIds: number[];
+}
+
 export interface UploadProgress {
   index: number;
   percent: number;
@@ -134,8 +148,19 @@ export interface ElectronAPI {
   ) => Promise<RealDebridConnectionResult>;
   generatePath: (metadata: FileMetadata) => Promise<string | null>;
   onUploadProgress: (callback: (data: UploadProgress) => void) => void;
+  onDownloadProgress: (callback: (percent: number) => void) => void;
   log: (msg: string) => void;
   // Real-Debrid magnet and torrent methods
   addMagnetToRealDebrid: (magnet: string) => Promise<AddMagnetResult>;
   getTorrentInfo: (torrentId: string) => Promise<TorrentInfo>;
+  selectFiles: (torrentId: string, fileIds: number[]) => Promise<TorrentInfo>;
+  deleteTorrent: (
+    torrentId: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  unrestrictLinks: (
+    links: string[],
+  ) => Promise<Array<{ success: boolean; url?: string; error?: string }>>;
+  downloadFiles: (
+    items: Array<{ downloadUrl: string; filename: string; bytes: number }>,
+  ) => Promise<Array<{ success: boolean; localPath?: string; error?: string }>>;
 }

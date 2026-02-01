@@ -7,7 +7,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DebridTab } from "./DebridTab";
-import type { TorrentInfo } from "../types";
+import type { TorrentInfo, MediaType, FileWithSubtitleInfo } from "../types";
 
 export type LootTab = "files" | "debrid";
 
@@ -24,7 +24,17 @@ interface LootViewProps {
   debridError: string | null;
   isDebridLoading: boolean;
   onMagnetSubmit: (magnet: string) => Promise<void>;
-  onClearTorrent: () => void;
+  // Media type detection props
+  mediaType: MediaType | null;
+  selectedFileIds: number[];
+  filesWithSubtitles: FileWithSubtitleInfo[];
+  isProcessingDownload: boolean;
+  onFileSelection: (fileId: number, subtitleFileIds: number[]) => void;
+  onSelectAllFiles: () => void;
+  onDeselectAllFiles: () => void;
+  onConfirmSelection: () => void;
+  onDeleteTorrent: () => void;
+  downloadProgress: number;
 }
 
 export const LootView: React.FC<LootViewProps> = ({
@@ -39,7 +49,16 @@ export const LootView: React.FC<LootViewProps> = ({
   debridError,
   isDebridLoading,
   onMagnetSubmit,
-  onClearTorrent,
+  mediaType,
+  selectedFileIds,
+  filesWithSubtitles,
+  isProcessingDownload,
+  onFileSelection,
+  onSelectAllFiles,
+  onDeselectAllFiles,
+  onConfirmSelection,
+  onDeleteTorrent,
+  downloadProgress,
 }) => {
   const [isHovering, setIsHovering] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -229,7 +248,16 @@ export const LootView: React.FC<LootViewProps> = ({
           debridError={debridError}
           isDebridLoading={isDebridLoading}
           onMagnetSubmit={onMagnetSubmit}
-          onClearTorrent={onClearTorrent}
+          mediaType={mediaType}
+          selectedFileIds={selectedFileIds}
+          filesWithSubtitles={filesWithSubtitles}
+          isProcessingDownload={isProcessingDownload}
+          onFileSelection={onFileSelection}
+          onSelectAllFiles={onSelectAllFiles}
+          onDeselectAllFiles={onDeselectAllFiles}
+          onConfirmSelection={onConfirmSelection}
+          onDeleteTorrent={onDeleteTorrent}
+          downloadProgress={downloadProgress}
         />
       </div>
     </div>
